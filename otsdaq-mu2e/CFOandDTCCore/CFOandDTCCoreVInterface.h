@@ -59,7 +59,6 @@ class CFOandDTCCoreVInterface : public FEVInterface
 	// DTC specific items
 	//----------------
 	// void  								configureJitterAttenuator	(void);
-	virtual std::string					readStatus					(void) = 0;
 	// float 								readTemperature				(void);  // return temperature of FPGA in degC
 	// std::string							printVoltages				(void);
 
@@ -84,8 +83,7 @@ class CFOandDTCCoreVInterface : public FEVInterface
 
   public: 
 	// std::string							GetFirmwareVersion			(void);
-	// void 								GetFireflyTemperature		(__ARGS__);
-	// void								ResetLinkRx					(__ARGS__);
+		// void								ResetLinkRx					(__ARGS__);
 	// void								ShutdownLinkTx				(__ARGS__);
 	// void								StartupLinkTx				(__ARGS__);
 	// void								ShutdownFireflyTx			(__ARGS__);

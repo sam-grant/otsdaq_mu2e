@@ -33,12 +33,15 @@ class CFOFrontEndInterface : public CFOandDTCCoreVInterface
 
 	// CFO specific items
 	//----------------
-	float 								MeasureLoopback				(int linkToLoopback);
-	virtual std::string					readStatus					(void) override;
+	float 								MeasureLoopback				(int linkToLoopback); //pre-covid loopback calculation stretegy
+	uint32_t 							measureDelay				(CFOLib::CFO_Link_ID link); //post-covid loopback function
+
 	// int  								getLinkStatus				(void);
 	void 								configureEventBuildingMode	(int step = -1);
 	void 								configureLoopbackMode		(int step = -1);
 	void 								configureForTimingChain		(int step = -1);
+	void								loopbackTest				(std::string runNumber, int step = -1);
+
 
 	// hardware access
 	//----------------
@@ -69,10 +72,13 @@ class CFOFrontEndInterface : public CFOandDTCCoreVInterface
 	// void 								FlashLEDs						(__ARGS__);	
 	void 								GetFirmwareVersion				(__ARGS__);
 	void 								GetStatus						(__ARGS__);
+	void 								GetCounters						(__ARGS__);
+	void 								GetFPGATemperature				(__ARGS__);
 	void								SelectJitterAttenuatorSource	(__ARGS__);
 
 
 	void 								CFOReset						(__ARGS__);
+	void 								CFOHalt							(__ARGS__);
 	
 	void 								WriteCFO						(__ARGS__);
 	void 								ReadCFO							(__ARGS__);
@@ -81,6 +87,8 @@ class CFOFrontEndInterface : public CFOandDTCCoreVInterface
 	void 								SetRunplan						(__ARGS__);
 	void 								LaunchRunplan					(__ARGS__);
 	void 								ConfigureForTimingChain			(__ARGS__);
+	void								LoopbackTest					(__ARGS__);
+	void 								TestMarker						(__ARGS__);
 };
 
 // clang-format on

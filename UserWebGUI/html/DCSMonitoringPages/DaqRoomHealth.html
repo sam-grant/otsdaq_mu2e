@@ -5,44 +5,28 @@
 
 
 
-		<link rel="stylesheet" type="text/css" href="/WebPath/UserWebPath/css/DqmPagesCss/DaqRoomHealth.css">
+		<link rel="stylesheet" type="text/css" href="/WebPath/UserWebPath/css/DCSMonitoringPages/DaqRoomHealth.css">
 
 		<script type="text/JavaScript" src="/WebPath/js/Globals.js"></script>
 		<script type="text/JavaScript" src="/WebPath/js/Debug.js"></script>
 		<script type="text/JavaScript" src="/WebPath/js/DesktopContent.js"></script>
-		<script type="text/JavaScript" src="/WebPath/js/widgetLibrary.js"></script>
 		<script type="text/JavaScript" src="/WebPath/js/js_lib/ConfigurationAPI.js"></script>
+		<script type="text/JavaScript" src="/WebPath/js/js_lib/SlowControlsAPI.js"></script>
 
-		<!-- MultiSelectBox: Must include .css style sheet and .js functionality -->
-		<link rel="stylesheet" type="text/css" href="/WebPath/css/MultiSelectBox.css">
 		<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
-		<script type="text/JavaScript" src="/WebPath/js/js_lib/MultiSelectBox.js"></script>
-		<script type="text/javascript" src="/WebPath/html/widgets/libraries/plotly-1.27.1.min.js"></script>
 
 		<script>
 
 			//functions:
 			//	init()
-			//	getPvSet()
 			//	makeMainPage()
 			//  drawGraph()
 
-			//	getAllPvList()
-			//	pvListReqHandler(req)
-			//	setupPvParams(id)
-			//	settingsReqHandler(req, passParams)
-
 			//	drawNewValue(widget, pvName, pvValue, pvTime, pvStatus, pvSeverity)
-			//	setWidgetToolTip(pvName, pvValue, pvTime, pvSettings)
-			//	checkPvTime(widget, pvName, pvTime)
-			//	setWidgetPvInfo(widget, pvName, pvValue, pvTime, pvStatus, pvSeverity, showLabel, foregroundColor, bkgColor, border)
 
-			//	indicateUserActivityToServer()
-			//	isUserAdminHandler(req)
 			//	generateUID()
 			//	generateUIDHandlerFunction(req)
 			//	pollServer()
-			//	updateRefreshInterval()
 			//	pollServerHandlerFunction(req)
 
 
@@ -62,13 +46,12 @@
 			//
 			//	- page init() is called by DesktopContent.js: 
 			//		* make Page_ to collect all objects to show PVs
-			//		* load PVs list
 			//		* makeMainPage()
-			//		* pollServer()
+			//			* setupPvParams(settings)
+			//			* Pass alarm thresholds, etc associated with pvList to widget content
 			//		* generateUID()
+			//			* pollServer()
 			//
-			//	- setupPvParams(settings)
-			//		* Pass alarm thresholds, etc associated with pvList to widget content
 			//
 			//	- drawNewValue()
 			//		* Update widget drawing based on new value (and append to history if needed)
@@ -81,9 +64,6 @@
 
 			var UID_ = 0;
 			var timeToPoll_ = false;
-
-			var isReadOnly_;
-			var datalist_;
 
 			page_.createPage = function(){
 
@@ -442,13 +422,6 @@
 
 				page_.createPage();
 
-				isReadOnly_ = false;
-
-				DesktopContent.XMLHttpRequest(
-				                    "Request?RequestType=isUserAdmin",
-				                    "",
-				                    isUserAdminHandler);
-
 				//get command string if opening a new window
 				var cmdStr = DesktopContent.getParameter(2); //from  location.search
 				if (cmdStr && cmdStr != "") {
@@ -458,17 +431,8 @@
 					cmdStr = cmdStr.replace(/%22/g, "\"");
 				}
 
-				//Make sure pv list is up-to-date
-				//getAllPvList();
-
-				UID_ = 0;
-
-				window.clearTimeout(timerVariable_);
-
 				makeMainPage();
 				generateUID();
-				pollServer();
-
 			} //end init()
 
 
@@ -516,7 +480,7 @@
 
 							var widgetsLength = Object.keys(page_.widgets).length;
 							page_.widgets[widgetsLength] = widgetObject;
-							setupPvParams(widgetsLength);
+							SlowControlsAPI.setupPvParams(widgetsLength, page_.widgets[widgetsLength]);
 						}
 
 						//EAST RACK Temperatures
@@ -533,7 +497,7 @@
 
 							var widgetsLength = Object.keys(page_.widgets).length;
 							page_.widgets[widgetsLength] = widgetObject;
-							setupPvParams(widgetsLength);
+							SlowControlsAPI.setupPvParams(widgetsLength, page_.widgets[widgetsLength]);
 						}
 
 						//WEST RACK LEDs
@@ -550,7 +514,7 @@
 
 							var widgetsLength = Object.keys(page_.widgets).length;
 							page_.widgets[widgetsLength] = widgetObject;
-							setupPvParams(widgetsLength);
+							SlowControlsAPI.setupPvParams(widgetsLength, page_.widgets[widgetsLength]);
 						}
 
 						//WEST RACK Temperatures
@@ -567,7 +531,7 @@
 
 							var widgetsLength = Object.keys(page_.widgets).length;
 							page_.widgets[widgetsLength] = widgetObject;
-							setupPvParams(widgetsLength);
+							SlowControlsAPI.setupPvParams(widgetsLength, page_.widgets[widgetsLength]);
 						}
 					}
 
@@ -602,7 +566,7 @@
 									widgetObject.el = ledE;
 									var widgetsLength = Object.keys(page_.widgets).length;
 									page_.widgets[widgetsLength] = widgetObject;
-									setupPvParams(widgetsLength);
+									SlowControlsAPI.setupPvParams(widgetsLength, page_.widgets[widgetsLength]);
 								}
 							}
 						}
@@ -627,7 +591,7 @@
 									widgetObject.el = temperE;
 									var widgetsLength = Object.keys(page_.widgets).length;
 									page_.widgets[widgetsLength] = widgetObject;
-									setupPvParams(widgetsLength);
+									SlowControlsAPI.setupPvParams(widgetsLength, page_.widgets[widgetsLength]);
 								}
 							}
 						}
@@ -658,7 +622,7 @@
 									widgetObject.el = ledW;
 									var widgetsLength = Object.keys(page_.widgets).length;
 									page_.widgets[widgetsLength] = widgetObject;
-									setupPvParams(widgetsLength);
+									SlowControlsAPI.setupPvParams(widgetsLength, page_.widgets[widgetsLength]);
 								}
 							}
 						}
@@ -683,7 +647,7 @@
 									widgetObject.el = temperW;
 									var widgetsLength = Object.keys(page_.widgets).length;
 									page_.widgets[widgetsLength] = widgetObject;
-									setupPvParams(widgetsLength);
+									SlowControlsAPI.setupPvParams(widgetsLength, page_.widgets[widgetsLength]);
 								}
 							}
 						}
@@ -697,86 +661,9 @@
 			//=====================================================================================
 			function drawGraph(widget, pvName)
 			{
-				var url = location.origin + "/WebPath/UserWebPath/html/DqmPages/Plot.html?urn=" + DesktopContent._localUrnLid + "&pv_name=" + pvName;
+				var url = location.origin + "/WebPath/UserWebPath/html/DCSMonitoringPages/Plot.html?urn=" + DesktopContent._localUrnLid + "&pv_name=" + pvName;
 				DesktopContent.openNewWindow("Plot",pvName,url,false);
 			} //end drawGraph()
-
-
-			//=====================================================================================
-			function getAllPvList()
-			{
-				DesktopContent.XMLHttpRequest(
-						"Request?RequestType=getList",
-						"", 
-						pvListReqHandler /*returnHandler*/, 
-						0 /*reqParam*/, 
-						0 /*progressHandler*/, 
-						0 /*callHandlerOnErr*/, 
-						false /*doNoShowLoadingOverlay*/);
-
-			} //end getAllPvList()
-
-
-			//=====================================================================================
-			function pvListReqHandler(req)
-			{
-				console.log("pvListReqHandler: response received!");	
-				console.log(req.responseText);
-				datalist_ = document.createElement('datalist');
-				datalist_.id = "pvDatalist";
-				datalist_.innerHTML = "";
-
-				var jsonStr = DesktopContent.getXMLValue(req, "JSON");
-				if(!jsonStr || jsonStr == "") return;				
-				var pvListJSON;
-
-				try {pvListJSON = JSON.parse(jsonStr); }
-				catch(e){console.log("Invalid JSON!"); return;}
-
-				console.log("pvListJSON:", pvListJSON);
-				for (var x in pvListJSON)
-				{
-					var option = document.createElement("option");
-					option.value = pvListJSON[x];
-					datalist_.appendChild(option);
-				}
-			} //end pvListReqHandler()
-
-
-			//=====================================================================================
-			//	expecting id as 'widget-#' ..and this function extracts the 
-			//	widget UID as integer #
-			function setupPvParams(id)
-			{
-				console.log("setting up widget! " + id);
-
-				var pvListCSV = "";
-
-				for(var pv in page_.widgets[id].pvList)
-				{
-					pvListCSV += pv + ",";
-				}
-
-				DesktopContent.XMLHttpRequest("Request?RequestType=getPVSettings",
-							//post data 
-    						"pvList=" + pvListCSV + 
-							"&id=" + id,
-							settingsReqHandler /*handler*/,
-							id /*parameter*/);
-
-			} //end setupWidget()
-
-
-			//=====================================================================================
-			function settingsReqHandler(req, id)
-			{
-				page_.widgets[id].pvSettings = JSON.parse(DesktopContent.getXMLValue(req, "JSON"));				
-
-				console.log(req);
-				console.log("pvSettings", page_.widgets[id].pvSettings);
-				console.log("id", id);
-
-			} //end settingsReqHandler()
 
 
 			//=====================================================================================
@@ -788,23 +675,22 @@
 				var units = page_.widgets[widget].pvSettings != undefined ? page_.widgets[widget].pvSettings[pvName].Units : "";
 				
 				if(page_.widgets[widget].el.id.indexOf('temper-') != -1)
-					//page_.widgets[widget].el.innerHTML = "<button class='pvButton' onclick='drawGraph(" + widget + ",\"" + pvName + "\")'>" + Number.parseFloat(pvValue).toFixed(1) + " " + units + "</button>";
 					page_.widgets[widget].el.innerHTML = "<button class='pvButton' onclick='drawGraph(" + widget + ",\"" + pvName + "\")'><div class='temperText'>" + Number.parseFloat(pvValue).toFixed(1) + "</div></button>";
 				else if(page_.widgets[widget].el.id.indexOf('led-') != -1)
 					page_.widgets[widget].el.innerHTML = "<button class='pvLedButton' onclick='drawGraph(" + widget + ",\"" + pvName + "\")'></button>";
 				else if(page_.widgets[widget].el.id.indexOf('nodeLed-') != -1)
 					page_.widgets[widget].el.innerHTML = "<button class='pvNodeLedButton' onclick='drawGraph(" + widget + ",\"" + pvName + "\")'></button>";
 
-				page_.widgets[widget].el.title = setWidgetToolTip(pvName, pvValue, pvTime, pvStatus, pvSeverity, page_.widgets[widget].pvSettings);
+				page_.widgets[widget].el.title = SlowControlsAPI.setWidgetToolTip(pvName, pvValue, pvTime, pvStatus, pvSeverity, page_.widgets[widget].pvSettings);
 
-				setWidgetPvInfo(
+				SlowControlsAPI.setWidgetPvInfo(
 								  widget
 								, pvName
 								, pvValue
 								, pvTime
 								, pvStatus
 								, pvSeverity
-								, false
+								, true
 								, false
 								, "DimGray"
 								, "gray"
@@ -814,158 +700,11 @@
 
 
 			//=====================================================================================
-			function setWidgetToolTip(pvName, pvValue, pvTime, pvStatus, pvSeverity, pvSettings)
-			{
-				var toolTip =
-				pvName
-				+ "\nLast value: "
-				+ Number.parseFloat(pvValue).toFixed(2)
-				+ " "
-				+ pvSettings[pvName].Units
-				
-				+ "\nTime: "
-				+ ConfigurationAPI.getDateString(new Date((pvTime | 0) * 1000))
-				+ "\nStatus: "
-				+ pvStatus
-				+ "\nSeverity: "
-				+ pvSeverity
-				+ "\nLower Warning Limit:  " + Number.parseFloat(pvSettings[pvName].Lower_Warning_Limit) + "\n"
-			  	+ "Upper Warning Limit:  "   + Number.parseFloat(pvSettings[pvName].Upper_Warning_Limit) + "\n"
-			  	+ "Lower Alarm Limit:    "   + Number.parseFloat(pvSettings[pvName].Lower_Alarm_Limit)   + "\n"
-			  	+ "Upper Alarm Limit:    "   + Number.parseFloat(pvSettings[pvName].Upper_Alarm_Limit)   + "\n"
-			  	+ "Lower Control Limit:   "  + Number.parseFloat(pvSettings[pvName].Lower_Control_Limit) + "\n"
-			  	+ "Upper Control Limit:   "  + Number.parseFloat(pvSettings[pvName].Upper_Control_Limit) + "\n"
-			  	+ "Lower Display Limit:   "  + Number.parseFloat(pvSettings[pvName].Lower_Display_Limit) + "\n"
-			  	+ "Upper Display Limit:   "  + Number.parseFloat(pvSettings[pvName].Upper_Display_Limit) + "\n";
-			  	return toolTip;
-			} //end setWidgetToolTip()
-
-
-			//=====================================================================================
-			function checkPvTime(widget, pvName, pvTime)
-			{
-				var actualTime = Math.floor(Date.now())/1000;
-				var time2compare = pvTime*1. + 6400;//10.*page_.widgets[widget].pvList[pvName]/1000;
-				console.log(
-							  "Date now: "
-							+ actualTime
-							+ " pvtime: "
-							+ pvTime
-							+ " time2compare - actualTime: "
-							+ (time2compare - actualTime)
-							+ " refresh rate: "
-							+ page_.widgets[widget].pvList[pvName]
-							);
-
-				if ((pvTime !== undefined) && (time2compare > actualTime)) return true;
-				return false;
-			} //end checkPVTime()
-
-
-			//=====================================================================================
-			function setWidgetPvInfo(widget, pvName, pvValue, pvTime, pvStatus, pvSeverity, timeCheck, showLabel, foregroundColor, bkgColor, border)
-			{
-				var widgetNameElement = page_.widgets[widget].el.parentElement.children[0];
-				var widgetValueElement = page_.widgets[widget].el;
-
-				var actualTime = Math.floor(Date.now())/1000;
-
-				if (widgetNameElement !== null && widgetNameElement !== undefined)
-					if (showLabel == true)
-					{
-						if(pvSeverity == "MAJOR" )
-							widgetNameElement.innerHTML = "<center style = 'color: red'>" + pvName + "<br>Status: " + pvStatus + "<br>Severity: " + pvSeverity + "</center>";
-						else if(pvSeverity == "MINOR")
-							widgetNameElement.innerHTML = "<center style = 'color: orange'>" + pvName + "<br>Status: " + pvStatus + "<br>Severity: " + pvSeverity + "</center>";
-						else if (!checkPvTime(widget, pvName, pvTime))
-							widgetNameElement.innerHTML = "<center style = 'color:" + foregroundColor + "'>"
-														+ pvName
-														+ "<br><i>(Not updated for more than " + parseInt((actualTime - pvTime*1.)/60) + " minutes)</i></center>";
-						else
-							widgetNameElement.innerHTML = pvName;
-
-					}
-
-				if (widgetValueElement !== null && widgetValueElement !== undefined)
-				{
-					if (timeCheck && checkPvTime(widget, pvName, pvTime))
-					{
-						widgetValueElement.style.backgroundColor = 'green';
-						widgetValueElement.style.border = border;
-					}
-					else
-					{
-						widgetValueElement.style.backgroundColor = bkgColor;
-						widgetValueElement.style.border = bkgColor;
-					}
-
-					if(pvSeverity == "NO_ALARM" )
-					{
-							widgetValueElement.style.border = "4px solid green";
-							widgetValueElement.style.backgroundColor = 'green';
-					}
-					else if(pvSeverity == "MINOR" )
-					{
-						widgetValueElement.style.border = "4px solid orange";
-						widgetValueElement.style.backgroundColor = 'orange';
-					}
-					else if(pvSeverity == "MAJOR" )
-					{
-						widgetValueElement.style.border = "4px solid red";
-						widgetValueElement.style.backgroundColor = 'red';
-					}
-					else
-					{
-						widgetValueElement.style.border = "1px solid " + bkgColor;
-						widgetValueElement.style.backgroundColor = bkgColor;
-					}
-				}
-				else
-					console.log("setWidgetPVinfo(): widgetValueElement is null or not defined!");
-			} //end setWidgetPVinfo()
-
-
-			//=====================================================================================
-			//indicate that login should be kept alive
-			function indicateUserActivityToServer() 
-			{
-				Debug.log("indicateUserActivityToServer()");
-				DesktopContent.XMLHttpRequest(
-						"Request?RequestType=userActivityHeartbeat",
-						"", 
-						undefined /*returnHandler*/, 
-						0 /*reqParam*/, 
-						0 /*progressHandler*/, 
-						0 /*callHandlerOnErr*/, 
-						true /*doNoShowLoadingOverlay*/);	
-			} //end indicateUserActivityToServer()
-
-
-			//=====================================================================================
-			function isUserAdminHandler(req)
-			{
-				Debug.log("getPermissionHandler() was called. " + req.responseText);//Req: " + req.responseText);
-
-				isAdmin = JSON.parse(decodeURIComponent(DesktopContent.getXMLValue(req, "JSON")))["message"];
-				console.log("User Permission: " + isAdmin);
-				console.log(isAdmin);
-
-				if(isAdmin == "Yes")
-				{
-					isReadOnly_ = false;
-				}
-				else
-				{
-					isReadOnly_ = true;
-				}
-
-				console.log("Interface isReadOnly=" + isReadOnly_);
-			} //end isUserAdminHandler()
-
-
-			//=====================================================================================
 			function generateUID()
 			{
+				UID_ = 0;
+				window.clearTimeout(timerVariable_);
+
 				//BEGIN Put all pvs in a JSON and send to server
 				var pvList = "";
 				//console.log("page: ", page_);
@@ -975,19 +714,16 @@
 
 					for(var pv in page_.widgets[widget].pvList)
 					{
-						//pvList += pv + ":"  + page_.widgets[widget].pvList.valueOf()[pv] + ",";
 						pvList += pv + ",";
 					}
 				}
-
-				timeToPoll_ = true;
 
 				//END Put all pvs in a JSON and send to server
 				DesktopContent.XMLHttpRequest(
 					"Request?RequestType=generateUID",
 					"pvList=" + pvList,
 					generateUIDHandlerFunction);//, undefined, undefined, "sequence");
-			} //end generateUID(
+			} //end generateUID()
 
 
 			//=====================================================================================
@@ -1003,20 +739,15 @@
 					Debug.log("Unable to generate UID!", Debug.HIGH_PRIORITY);
 				}
 
-				if(timeToPoll_)
-				{
-					pollServer();
-				}
+				pollServer();
 			} //end generateUIDHandlerFunction()
 
 
 			//=====================================================================================
 			function pollServer()
 			{
-				timeToPoll_ = false;
 				Debug.log("pollServer: polling server!");
 				console.log("pollServer(): ",page_.widgets);
-				//console.log("UID is ", UID_);
 				if(page_.widgets)
 				{
 					DesktopContent.XMLHttpRequest(
@@ -1028,16 +759,7 @@
 						0 /*callHandlerOnErr*/, 
 						true /*doNoShowLoadingOverlay*/);	
 				}
-			} //end pollServer())
-
-
-			//=====================================================================================
-			function updateRefreshInterval()
-			{
-				console.log("updateRefreshInterval.refreshRate_ (ms): " + refreshRate_);
-				window.clearInterval(timerVariable_);
-				timerVariable_ = setInterval(pollServer, refreshRate_);
-			} //end updateRefreshInterval()
+			} //end pollServer()
 
 
 			//=====================================================================================
@@ -1062,7 +784,6 @@
 				{
 					console.log("Have to generate new UID!");
 					generateUID();
-					timeToPoll_ = true;
 				}
 				else
 				{
@@ -1071,13 +792,13 @@
 						console.log("pollServerHandlerFunction: pv" + pv);						
 						for (var widget in page_.widgets)
 						{
-							console.log("pollServerHandlerFunction: " + page_.widgets[widget]);
+							//console.log("pollServerHandlerFunction: " + page_.widgets[widget]);
 							for(var dependendentPV in page_.widgets[widget].pvList)
 							{
-								console.log("poll: " + dependendentPV);
+								//console.log("poll: " + dependendentPV);
 								if(pv == dependendentPV && page_.widgets[widget].loaded != "false")
 								{
-									console.log("Widget*************", widget, pv);
+									//console.log("Widget*************", widget, pv);
 									try
 									{
 										drawNewValue(
@@ -1097,9 +818,9 @@
 							}
 						}
 					}
-				}
 
-				timerVariable_ = window.setTimeout(pollServer, refreshRate_);
+					timerVariable_ = window.setTimeout(pollServer, refreshRate_);
+				}
 			} //end pollServerHandlerFunction()
 
 
@@ -1113,7 +834,8 @@
 				<div style="background-color: green">No alarm</div>
 				<div style="background-color: orange">Warning</div>
 				<div style="background-color: red">Alarm</div>
-				<div style="background-color: gray">Undefined state</div>
+				<div style="background-color: gray">Stale</div>
+				<div style="background-color: darkslategray">Undefined state</div>
 				<div style="align:right">
 					<h2 align="center">DAQ room health</h2>
 				</div>

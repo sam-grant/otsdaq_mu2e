@@ -39,72 +39,29 @@ uint16_t ROCPolarFireCoreInterface::readEmulatorRegister(uint16_t address)
 	return -1;
 }  // end readEmulatorRegister()
 
-//==================================================================================================
-void ROCPolarFireCoreInterface::writeROCRegister(DTCLib::roc_address_t address,
-                                                 DTCLib::roc_data_t    data_to_write)
-{
-	__FE_COUT__ << "Calling write ROC register: link number " << std::dec << linkID_
-	            << ", address = " << address << ", write data = " << data_to_write
-	            << __E__;
-
-	bool acknowledge_request = false;
-
-	thisDTC_->WriteROCRegister(linkID_, address, data_to_write, acknowledge_request, 0);
-
-}  // end writeROCRegister()
 
 //==================================================================================================
-DTCLib::roc_data_t ROCPolarFireCoreInterface::readROCRegister(
-    DTCLib::roc_address_t address)
+void ROCPolarFireCoreInterface::readEmulatorBlock(std::vector<DTCLib::roc_data_t>& 	data,
+                                             DTCLib::roc_address_t  	   	address,
+                                             uint16_t               		numberOfReads,
+                                             bool                   		incrementAddress)
 {
-	__FE_COUT__ << "Calling read ROC register: link number " << std::dec << linkID_
-	            << ", address = 0x" << std::hex << address << __E__;
-
-	//DTCLib::roc_data_t read_data = 0;
-	return thisDTC_->ReadROCRegister(linkID_, address, 100 /* retries */);
-	//	try
-	//	{
-	//		read_data = thisDTC_->ReadROCRegister(linkID_, address, 1);
-	//	}
-	//	catch(...)
-	//	{
-	//		__FE_COUT_ERR__ << "DTC failed DCS read" << __E__;
-	//		read_data = -999;
-	//	}
-	//
-	//	return read_data;
-}  // end readROCRegister()
-
-//==================================================================================================
-void ROCPolarFireCoreInterface::readROCBlock(std::vector<uint16_t>& data,
-                                             uint16_t               address,
-                                             uint16_t               numberOfReads,
-                                             bool                   incrementAddress)
-{
-	__FE_COUT__ << "Calling read ROC block: link number " << std::dec << linkID_
+	__FE_COUT__ << "Calling read emulator block: link number " << std::dec << linkID_
 	            << ", address = " << address << ", numberOfReads = " << numberOfReads
 	            << ", incrementAddress = " << incrementAddress << __E__;
 
-	thisDTC_->ReadROCBlock(data, linkID_, address, numberOfReads, incrementAddress, 0);
-
-}  // end readROCBlock()
-
-//==================================================================================================
-void ROCPolarFireCoreInterface::readEmulatorBlock(std::vector<uint16_t>& data,
-                                                  uint16_t               address,
-                                                  uint16_t               wordCount,
-                                                  bool                   incrementAddress)
-{
-	__FE_COUT__ << "Calling read emulator block: link number " << std::dec << linkID_
-	            << ", address = " << address << ", wordCount = " << wordCount
-	            << ", incrementAddress = " << incrementAddress << __E__;
-
-	for(unsigned int i = 0; i < wordCount; ++i)
+	for(unsigned int i = 0; i < numberOfReads; ++i)
 		data.push_back(address + (incrementAddress ? i : 0));
 }  // end readEmulatorBlock()
 
 //==================================================================================================
-int ROCPolarFireCoreInterface::readTimestamp() { return this->readRegister(12); }
+void ROCPolarFireCoreInterface::GetStatus() { __SS__ << "TODO"; __SS_THROW__; }
+
+//==================================================================================================
+void ROCPolarFireCoreInterface::GetFirmwareVersion() { __SS__ << "TODO"; __SS_THROW__; }
+
+//==================================================================================================
+int ROCPolarFireCoreInterface::readInjectedPulseTimestamp() { return this->readRegister(12); }
 
 //==================================================================================================
 void ROCPolarFireCoreInterface::writeDelay(uint16_t delay)
@@ -189,7 +146,12 @@ catch(const std::runtime_error& e)
 catch(...)
 {
 	__FE_SS__ << "Unknown error caught. Check printouts!" << __E__;
-	__FE_MOUT__ << ss.str();
+	try	{ throw; } //one more try to printout extra info
+	catch(const std::exception &e)
+	{
+		ss << "Exception message: " << e.what();
+	}
+	catch(...){}
 	__FE_SS_THROW__;
 }  // end configure() catch
 

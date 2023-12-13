@@ -41,6 +41,7 @@ CFOFrontEndInterface::CFOFrontEndInterface(
 
 	__FE_COUT_INFO__ << "CFO instantiated with name: " << getInterfaceUID()
 	            << " talking to /dev/mu2e" << deviceIndex_ << __E__;
+	__FE_COUT__ << "Linux Kernel Driver Version: " << thisCFO_->GetDevice()->get_driver_version() << __E__;
 }  // end constructor()
 
 //===========================================================================================
@@ -65,7 +66,10 @@ void CFOFrontEndInterface::registerFEMacros(void)
 					&CFOFrontEndInterface::GetFirmwareVersion),  // feMacroFunction
 					std::vector<std::string>{},
 					std::vector<std::string>{"Firmware Version Date"},  // namesOfOutputArgs
-					1);//"allUsers:0 | TDAQ:255");
+					1,   //"allUsers:0 | TDAQ:255");
+					"*",  /* allowedCallingFEs */
+					"Read the modification date of the CFO firmware using <b>MON/DD/20YY HH:00</b> format."
+	);
 					
 	// registerFEMacroFunction(
 	// 	"Flash_LEDs",  // feMacroName
@@ -83,7 +87,10 @@ void CFOFrontEndInterface::registerFEMacros(void)
 					&CFOFrontEndInterface::GetStatus),            // feMacroFunction
 					std::vector<std::string>{},  // namesOfInputArgs
 					std::vector<std::string>{"Status"},
-					1);  // requiredUserPermissions
+					1,   // requiredUserPermissions 
+					"*",  // allowedCallingFEs
+					"Reads and displays all registers in a print friendly format."
+	);
 
 	registerFEMacroFunction(
 		"CFO Reset",
@@ -91,7 +98,21 @@ void CFOFrontEndInterface::registerFEMacros(void)
 					&CFOFrontEndInterface::CFOReset),
 					std::vector<std::string>{},
 					std::vector<std::string>{},
-					1);  // requiredUserPermissions
+					1,  // requiredUserPermissions
+					"*",  // allowedCallingFEs
+					"Executes a soft reset of the CFO by setting the reset bit (31) to true on the <b>CFO Control Register</b> (0x9100)." 
+	);
+
+	registerFEMacroFunction(
+		"CFO Halt",
+			static_cast<FEVInterface::frontEndMacroFunction_t>(
+					&CFOFrontEndInterface::CFOHalt),
+					std::vector<std::string>{},
+					std::vector<std::string>{},
+					1,  // requiredUserPermissions
+					"*",
+					"Transitions the state machine to <b>Halt</b> by setting the Enable Beam Off Mode Register to off."
+	);
 
 	registerFEMacroFunction(
 		"CFO Write",  // feMacroName
@@ -99,7 +120,37 @@ void CFOFrontEndInterface::registerFEMacros(void)
 					&CFOFrontEndInterface::WriteCFO),  // feMacroFunction
 					std::vector<std::string>{"address", "writeData"},
 					std::vector<std::string>{},  // namesOfOutput
-					1);                          // requiredUserPermissions
+					1,    // requiredUserPermissions
+					"*",  // allowedCallingFEs
+					"This FE Macro writes to the CFO registers."
+	);
+
+	registerFEMacroFunction(
+		"Loopback Test",  // feMacroName
+			static_cast<FEVInterface::frontEndMacroFunction_t>(
+					&CFOFrontEndInterface::LoopbackTest),  // feMacroFunction
+					std::vector<std::string>{"loopbacks", "link", "delay"},
+					std::vector<std::string>{"Response"},  // namesOfOutput
+					1,
+					"*", 
+					"Similar to <b>Test Loopback marker</b>, this FE Macro repeatedly measures the delay of markers from ROCs for a specified link. "
+					"The average delay is returned given the number of iterations (loopbacks), link, and delay (sleep between iterations). "
+					"This FE Macro is useful for Event Window synchronization.\n\n"
+					"Constraints:\n"
+					"\t-Loopback must be less than 10,000.\n"
+	); 
+
+	registerFEMacroFunction(
+		"Test Loopback marker",  // feMacroName
+			static_cast<FEVInterface::frontEndMacroFunction_t>(
+					&CFOFrontEndInterface::TestMarker),  // feMacroFunction
+					std::vector<std::string>{"DTC-chain link index (0-7)"},
+					std::vector<std::string>{"Response"},  // namesOfOutput
+					1,
+					"*",
+					"This FE Macro measures the delay of a marker from ROCs. "
+					"Optionally, the delay can be measured over mutliple iterations with the <b>Loopback Test</B> Macro."
+	); 
 
 	registerFEMacroFunction(
 		"CFO Read",
@@ -107,7 +158,12 @@ void CFOFrontEndInterface::registerFEMacros(void)
 					&CFOFrontEndInterface::ReadCFO),                  // feMacroFunction
 					std::vector<std::string>{"address"},  // namesOfInputArgs
 					std::vector<std::string>{"readData"},
-					1);  // requiredUserPermissions
+					1,  // requiredUserPermissions
+					"*", 
+					"Read from the CFO Memory Map.\n\n"
+					"Parameters:\n"
+					"\taddress (uint16_t): Address in Memory Map.\n"
+	); 
 
 	registerFEMacroFunction(
 		"Select Jitter Attenuator Source",
@@ -115,7 +171,12 @@ void CFOFrontEndInterface::registerFEMacros(void)
 					&CFOFrontEndInterface::SelectJitterAttenuatorSource),
 				        std::vector<std::string>{"Source (0 is Local oscillator, 1 is RTF Copper Clock)","DoNotSet"},
 						std::vector<std::string>{"Register Write Results"},
-					1);  // requiredUserPermissions
+					1, // requiredUserPermissions
+					"*",
+					"The Jitter Attenuator is used to remove jitter, or variation in the timing of signals. "
+					"Select the source of the jitter attenuator: a local oscilator on the CFO or the RTF.\n"
+					"The RTF (RJ45 Timing Fanout) is a separate board to alleviate jitter accumulation. <b>Not all DTCs are connected to the RTF</b>."
+	); 
 
 	registerFEMacroFunction(
 		"Reset Runplan",
@@ -123,23 +184,35 @@ void CFOFrontEndInterface::registerFEMacros(void)
 					&CFOFrontEndInterface::ResetRunplan),                  // feMacroFunction
 					std::vector<std::string>{},  // namesOfInputArgs
 					std::vector<std::string>{},
-					1);  // requiredUserPermissions					
+					1,   // requiredUserPermissions					
+					"*",
+					"Resets the Event Building run plan by setting the reset bit (27) to true on the <b>CFO Control Register</b>."
+	);
 
 	registerFEMacroFunction(
 		"Compile Runplan",
 			static_cast<FEVInterface::frontEndMacroFunction_t>(
 					&CFOFrontEndInterface::CompileRunplan),                  // feMacroFunction
-					std::vector<std::string>{},//"Input Text Run Plan", "Output Binary Run File"},  // namesOfInputArgs
-					std::vector<std::string>{},
-					1);  // requiredUserPermissions	
+					std::vector<std::string>{"Input Text File", "Output Binary File"},//"Input Text Run Plan", "Output Binary Run File"},  // namesOfInputArgs
+					std::vector<std::string>{"Result"},
+					1,    // requiredUserPermissions	
+					"*" /* allowedCallingFEs */,
+					"This FE Macro compiles the CFO run plan to a binary file. You must compile before running <b>Set Runplan</b> "
+					"which downloads the binary run plan to the CFO.\n\nDefault text run plan: srcs/mu2e_pcie_utils/cfoInterfaceLib/Command.txt\nDefault binary run plan: srcs/mu2e_pcie_utils/cfoInterfaceLib/Command.bin" /* feMacroTooltip */
+					); 
 
 	registerFEMacroFunction(
 		"Set Runplan",
 			static_cast<FEVInterface::frontEndMacroFunction_t>(
 					&CFOFrontEndInterface::SetRunplan),                  // feMacroFunction
-					std::vector<std::string>{},//"Binary Run File"},  // namesOfInputArgs
-					std::vector<std::string>{},
-					1);  // requiredUserPermissions	
+					std::vector<std::string>{"Binary Run File"},         // namesOfInputArgs
+					std::vector<std::string>{"Result"},
+					1,   // requiredUserPermissions	
+					"*", /* allowedCallingFEs */
+					"Download the binary run plan to the CFO. <b>You must first compile your run plan</b>.\n\n\n\n" /* feMacroTooltip */
+					"Paramters:\n" 
+					"\tBinary Run File (string): Path to the binary run plan. Default: srcs/mu2e_pcie_utils/cfoInterfaceLib/Commands.bin\n"
+	);
 
 	registerFEMacroFunction(
 		"Launch Runplan",
@@ -147,8 +220,11 @@ void CFOFrontEndInterface::registerFEMacros(void)
 					&CFOFrontEndInterface::LaunchRunplan),                  // feMacroFunction
 					std::vector<std::string>{},  // namesOfInputArgs
 					std::vector<std::string>{},
-					1);  // requiredUserPermissions	
-
+					1,   // requiredUserPermissions	 
+					"*" /* allowedCallingFEs */,
+					"Launchs the Event Building run plan. You must <b>Compile Runplan</b> and <b>Set Runplan</b> before launching. " /* feMacroTooltip */
+					"You do not need to compile and set the same runplan more than once. Use <b>Reset Runplan</b> and <b>Launch Runplan</b> thereafter."
+	);
 	
 	registerFEMacroFunction(
 		"Configure for Timing Chain",
@@ -156,8 +232,10 @@ void CFOFrontEndInterface::registerFEMacros(void)
 					&CFOFrontEndInterface::ConfigureForTimingChain),                  // feMacroFunction
 					std::vector<std::string>{"StepIndex"},  // namesOfInputArgs
 					std::vector<std::string>{},
-					1);  // requiredUserPermissions	
-	
+					1, 
+					"*", 
+					"This FE Macro configures the CFO for DTC chain synchronization."
+	);  // requiredUserPermissions	
 
 	// clang-format on
 
@@ -183,33 +261,6 @@ void CFOFrontEndInterface::registerFEMacros(void)
 // 	return readbackValue;
 // }  // end registerWrite()
 
-//=====================================================================================
-std::string CFOFrontEndInterface::readStatus(void)
-{
-	return thisCFO_->FormattedRegDump(20);
-	// std::stringstream ss;
-	// ss << "firmware version    (0x9004) = 0x" << GetFirmwareVersion() << __E__;
-
-	// ss << printVoltages() << __E__;
-
-	// ss << device_name_ << " temperature = " << readTemperature() << " degC"
-	//             << __E__ << __E__;
-
-	// ss << "link enable         (0x9114) = 0x" << std::hex << registerRead(0x9114) << __E__;
-	// ss << "SERDES reset        (0x9118) = 0x" << std::hex << registerRead(0x9118) << __E__;
-	// ss << "SERDES unlock error (0x9124) = 0x" << std::hex << registerRead(0x9124) << __E__;
-	// ss << "PLL locked          (0x9128) = 0x" << std::hex << registerRead(0x9128) << __E__;
-	// ss << "SERDES Rx status....(0x9134) = 0x" << std::hex << registerRead(0x9134) << __E__;
-	// ss << "SERDES reset done...(0x9138) = 0x" << std::hex << registerRead(0x9138) << __E__;
-	// ss << "SERDES Rx CDR lock..(0x9140) = 0x" << std::hex << registerRead(0x9140) << __E__;
-	// ss << "SERDES ref clk freq.(0x9160) = 0x" << std::hex << registerRead(0x9160) << " = " <<
-	// 	 std::dec << registerRead(0x9160) << __E__;
-
-	// __FE_COUT__ << ss.str() << __E__;
-
-	// return ss.str();
-} //end readStatus()
-
 // //=====================================================================================
 // //
 // int CFOFrontEndInterface::getLinkStatus()
@@ -220,6 +271,146 @@ std::string CFOFrontEndInterface::readStatus(void)
 
 // 	return link_status;
 // }
+
+//=====================================================================================
+// TODO: function to do a loopback test on the specified link
+uint32_t CFOFrontEndInterface::measureDelay(CFOLib::CFO_Link_ID link)
+{
+	// TODO: how can I understand if the measure fails?
+	__FE_COUT__ << "Send loopback marker on link " << link << __E__;
+
+	thisCFO_->ResetDelayRegister();	// reset 0x9380
+	thisCFO_->DisableLinks();	// reset 0x9114
+	// configure the DTC (to configure the ROC in a loop)
+	thisCFO_->EnableLink(link, DTC_LinkEnableMode(true, true)); // enable Tx and Rx
+	thisCFO_->EnableDelayMeasureMode(link);
+	thisCFO_->EnableDelayMeasureNow(link);
+	u_int32_t delay = thisCFO_->ReadCableDelayValue(link);	// read delay
+	__FE_COUT__ << "Delay measured: " << delay << " (ns) on link: " <<  link << __E__;
+	// reset registers
+	thisCFO_->ResetDelayRegister();
+	thisCFO_->DisableLinks();
+
+	return delay;
+}
+
+//========================================================================
+void CFOFrontEndInterface::GetFPGATemperature(__ARGS__)
+{	
+	// rd << "Celsius: " << val << ", Fahrenheit: " << val*9/5 + 32 << ", " << (val < 65?"GOOD":"BAD");
+	std::stringstream ss;
+	ss << thisCFO_->FormatFPGATemperature() << "\n\n" << thisCFO_->FormatFPGAAlarms();
+	__SET_ARG_OUT__("Temperature", ss.str());
+} //end GetFPGATemperature()
+
+//=====================================================================================
+// TODO: function to do a loopback test on the specified link, handle the boadcast
+void CFOFrontEndInterface::LoopbackTest(__ARGS__)
+{
+	__FE_COUT__ << "Operation \"Loopback test\"" << std::endl;
+
+	// stream to print the output
+	std::stringstream ostr;
+	ostr << std::endl;
+	
+	// parameters 
+	int numberOfLoopback = __GET_ARG_IN__("loopbacks", uint32_t);
+	int input_link = __GET_ARG_IN__("link", uint8_t);
+	int delay = __GET_ARG_IN__("delay", uint32_t);
+
+	// config parameters (TODO: read from config)
+	unsigned alignament_marker = 10;
+	const int MAX_LOOPBACK = 10000;
+	const int MIN_LOOPBACK = 1;
+
+	if (numberOfLoopback > MAX_LOOPBACK)
+		numberOfLoopback = MAX_LOOPBACK;
+
+	if (numberOfLoopback < MIN_LOOPBACK)
+		numberOfLoopback = MIN_LOOPBACK;
+
+	// variable to compuet the average
+	float avg_delay = 0.0;
+	unsigned int comulative_delay = 0;
+	// int fail_measure = 0;
+
+	// log the input
+	__FE_COUTV__(numberOfLoopback);
+	__FE_COUTV__(input_link);
+	__FE_COUTV__(delay);
+
+	ostr << "Number of loopbacks: " << numberOfLoopback << std::endl;
+
+	// TODO: read from config with special param
+	if (numberOfLoopback < 0)
+	{
+		return;
+	}
+	if (input_link < 0)
+	{
+		return;
+	}
+
+	CFOLib::CFO_Link_ID link = static_cast<CFOLib::CFO_Link_ID>(input_link);
+
+
+	// sending first marker to align the clock of the ROC
+	__FE_COUT__ << "Align the ROC's clock..." <<  __E__;
+	for (unsigned int n = 0; n < alignament_marker; ++n)
+	{
+		measureDelay(link);
+	}
+
+	// send marker
+	for (int n = 0; n < numberOfLoopback; ++n)
+	{
+		// TODO: check if it fail
+		uint32_t link_delay = measureDelay(link);
+		comulative_delay += link_delay;
+		__FE_COUT__ << "[" << (n+1) << "] Record: " << link_delay <<  __E__;
+		usleep(delay);	// maybe not defined
+	}
+
+	avg_delay = comulative_delay / numberOfLoopback;
+	ostr << "Average delay: " << avg_delay << std::endl;
+	__FE_COUT__ << "Average delay: " << avg_delay << __E__;
+
+	ostr << std::endl << std::endl;
+
+	__SET_ARG_OUT__("Response", ostr.str());
+
+} // end LoopbackTest()
+
+//=====================================================================================
+// TODO: function to do a loopback test on the specified link
+void CFOFrontEndInterface::TestMarker(__ARGS__)
+{
+	__FE_COUT__ << "Operation \"Marker test\"" << std::endl;
+
+	// stream to print the output
+	std::stringstream ostr;
+	ostr << std::endl;
+	
+	// parameters (TODO: make the default)
+	int input_link = __GET_ARG_IN__("DTC-chain link index (0-7)", uint8_t);
+
+	if (input_link < 0)
+	{
+		return;
+	}
+
+	__FE_COUTV__(input_link);
+	CFOLib::CFO_Link_ID link = static_cast<CFOLib::CFO_Link_ID>(input_link);
+	uint32_t link_delay = measureDelay(link);
+
+	ostr << "Marker sent on link: " << link << std::endl
+		 << "\t Delay: " << link_delay << std::endl;
+	__FE_COUT__ << "Marker sent on link: " << link << std::endl
+	 			<< "\t Delay: " << link_delay << std::endl;
+
+	ostr << std::endl << std::endl;
+	__SET_ARG_OUT__("Response", ostr.str());
+} // end TestMarker()
 
 //=====================================================================================
 //
@@ -409,16 +600,17 @@ void CFOFrontEndInterface::configure(void)
 		__FE_COUT_INFO__ << "Not configuring CFO for hardware development mode!" << __E__;
 		return;
 	}
-	else if(operatingMode_ == CFOandDTCCoreVInterface::CONFIG_MODE_EVENT_BUILDING)
+	else if(operatingMode_ == CFOandDTCCoreVInterface::CONFIG_MODE_EVENT_BUILDING ||
+			operatingMode_ == CFOandDTCCoreVInterface::CONFIG_MODE_LOOPBACK)
 	{
 		__FE_COUT_INFO__ << "Configuring for Event Building mode!" << __E__;
 		configureEventBuildingMode();
 	}
-	else if(operatingMode_ == CFOandDTCCoreVInterface::CONFIG_MODE_LOOPBACK)
-	{
-		__FE_COUT_INFO__ << "Configuring for Loopback mode!" << __E__;
-		configureLoopbackMode();
-	}
+	// else if(operatingMode_ == CFOandDTCCoreVInterface::CONFIG_MODE_LOOPBACK)
+	// {
+	// 	__FE_COUT_INFO__ << "Configuring for Loopback mode!" << __E__;
+	// 	configureEventBuildingMode();
+	// }
 	else
 	{
 		__FE_SS__ << "Unknown system operating mode: " << operatingMode_ << __E__
@@ -608,7 +800,7 @@ void CFOFrontEndInterface::configure(void)
 		__FE_COUT__ << __E__;
 	}
 
-	readStatus();             // spit out link status at every step
+	__FE_COUT__ << "\n" << thisCFO_->FormattedRegDump(120, thisCFO_->formattedDumpFunctions_);  // spit out link status at every step
 	indicateIterationWork();  // I still need to be touched
 	return;
 } //end configure()
@@ -620,12 +812,14 @@ void CFOFrontEndInterface::configureEventBuildingMode(int step)
 	if(step == -1)
 		step = getIterationIndex();
 
-	__FE_COUT_INFO__ << "configureEventBuildingMode() " << step << "." << getSubIterationIndex() << __E__;
+	__FE_COUT_INFO__ << "configureEventBuildingMode() " << step << __E__;
 	
 	if(step < CFOandDTCCoreVInterface::CONFIG_DTC_TIMING_CHAIN_START_INDEX)
 	{
+		// in order to start from zero
 		if(timing_chain_first_substep_ == -1)
-				timing_chain_first_substep_ = getSubIterationIndex();
+			timing_chain_first_substep_ = getSubIterationIndex();
+
 		configureForTimingChain();
 		indicateIterationWork();
 	}
@@ -666,53 +860,54 @@ void CFOFrontEndInterface::configureEventBuildingMode(int step)
 //==============================================================================
 void CFOFrontEndInterface::configureLoopbackMode(int step)
 {
-	if(step == -1)
-		step = getIterationIndex();
+	__FE_COUT__ << "The loopback is performed in the strat phase." << __E__;
+	// if(step == -1)
+	// 	step = getIterationIndex();
 
-	__FE_COUT_INFO__ << "configureLoopbackMode() " << step << "." << getSubIterationIndex() << __E__;
+	// __FE_COUT_INFO__ << "configureLoopbackMode() " << step << "." << getSubIterationIndex() << __E__;
 	
-	if(step < CFOandDTCCoreVInterface::CONFIG_DTC_TIMING_CHAIN_START_INDEX)
-	{
-		if(timing_chain_first_substep_ == -1)
-				timing_chain_first_substep_ = getSubIterationIndex();
-		configureForTimingChain();
-		indicateIterationWork();
-	}
-	else if(step < CFOandDTCCoreVInterface::CONFIG_DTC_TIMING_CHAIN_START_INDEX + 
-		CFOandDTCCoreVInterface::CONFIG_DTC_TIMING_CHAIN_STEPS)
-	{
-		__FE_COUT__ << "Do nothing while DTCs finish configureForTimingChain..." << __E__;
-		indicateIterationWork();
-	}
-	else if(step == CFOandDTCCoreVInterface::CONFIG_DTC_TIMING_CHAIN_START_INDEX + 
-		CFOandDTCCoreVInterface::CONFIG_DTC_TIMING_CHAIN_STEPS)
-	{
-		__FE_COUT__ << "CFO reset serdes TX " << __E__;
-		thisCFO_->ResetAllSERDESTx();
-		indicateIterationWork();
-	}
-	else if(step == 1 + CFOandDTCCoreVInterface::CONFIG_DTC_TIMING_CHAIN_START_INDEX + 
-		CFOandDTCCoreVInterface::CONFIG_DTC_TIMING_CHAIN_STEPS)
-	{ 
-		__FE_COUT__ << "Enable communication over links" << __E__;
-		thisCFO_->EnableTiming();
-		thisCFO_->EnableEventWindowInput();
+	// if(step < CFOandDTCCoreVInterface::CONFIG_DTC_TIMING_CHAIN_START_INDEX)
+	// {
+	// 	if(timing_chain_first_substep_ == -1)
+	// 			timing_chain_first_substep_ = getSubIterationIndex();
+	// 	configureForTimingChain();
+	// 	indicateIterationWork();
+	// }
+	// else if(step < CFOandDTCCoreVInterface::CONFIG_DTC_TIMING_CHAIN_START_INDEX + 
+	// 	CFOandDTCCoreVInterface::CONFIG_DTC_TIMING_CHAIN_STEPS)
+	// {
+	// 	__FE_COUT__ << "Do nothing while DTCs finish configureForTimingChain..." << __E__;
+	// 	indicateIterationWork();
+	// }
+	// else if(step == CFOandDTCCoreVInterface::CONFIG_DTC_TIMING_CHAIN_START_INDEX + 
+	// 	CFOandDTCCoreVInterface::CONFIG_DTC_TIMING_CHAIN_STEPS)
+	// {
+	// 	__FE_COUT__ << "CFO reset serdes TX " << __E__;
+	// 	thisCFO_->ResetAllSERDESTx();
+	// 	indicateIterationWork();
+	// }
+	// else if(step == 1 + CFOandDTCCoreVInterface::CONFIG_DTC_TIMING_CHAIN_START_INDEX + 
+	// 	CFOandDTCCoreVInterface::CONFIG_DTC_TIMING_CHAIN_STEPS)
+	// { 
+	// 	__FE_COUT__ << "Enable communication over links" << __E__;
+	// 	thisCFO_->EnableTiming();
+	// 	thisCFO_->EnableEventWindowInput();
 
-		thisCFO_->EnableLink(CFOLib::CFO_Link_ID::CFO_Link_ALL);
+	// 	thisCFO_->EnableLink(CFOLib::CFO_Link_ID::CFO_Link_ALL);
 
-		__FE_COUT__ << "CFO set beam off Event Window interval time" << __E__;
-		thisCFO_->SetEventWindowEmulatorInterval(0x1f40 /* 40us */);
+	// 	__FE_COUT__ << "CFO set beam off Event Window interval time" << __E__;
+	// 	thisCFO_->SetEventWindowEmulatorInterval(0x1f40 /* 40us */);
 
-		__FE_COUT__ << "CFO set 40MHz marker interval" << __E__;
-		thisCFO_->SetClockMarkerIntervalCount(0x0800);  // 0 = NO markers
-	}
-	else
-		__FE_COUT__ << "Do nothing while other configurable entities finish..." << __E__;
+	// 	__FE_COUT__ << "CFO set 40MHz marker interval" << __E__;
+	// 	thisCFO_->SetClockMarkerIntervalCount(0x0800);  // 0 = NO markers
+	// }
+	// else
+	// 	__FE_COUT__ << "Do nothing while other configurable entities finish..." << __E__;
 	
 }  // end configureLoopbackMode()
 
 //==============================================================================
-void CFOFrontEndInterface::configureForTimingChain(int step /* = -1 */)
+void CFOFrontEndInterface::configureForTimingChain(int step)
 {
 	//use sub-iteration index (but not the value of the index)
 	//	sub-iterations focus allow one entity to finish an iteration index, while others wait,
@@ -735,23 +930,16 @@ void CFOFrontEndInterface::configureForTimingChain(int step /* = -1 */)
 			thisCFO_->DisableAllOutputs();
 
 
-			__FE_COUTV__(configure_clock_);
+			__FE_COUTV__(configure_clock_);	//1
 
 			//NOTE on Jun/13/2023 16:00 raw-data: 0x23061316
 			//	need to configure crystal!
 
-			__FE_COUT__ << " =? " << (thisCFO_->ReadDesignDate() == 
-				"Jun/13/2023 16:00   raw-data: 0x23061316"?"yes":"no") << " ? " <<
-				(designVersion == 
-				"Jun/13/2023 16:00   raw-data: 0x23061316"?"yes":"no") << __E__;
-
-			{
-				for(size_t i=0;i<designVersion.size();++i)
-					__FE_COUT__ << designVersion[i] << " ? " << matchDesignVersion[i] << " = " 
-						<< (designVersion[i] == matchDesignVersion[i]?"y":"n") << __E__;
-			}
-			if(configure_clock_ && thisCFO_->ReadDesignDate() == 
-				"Jun/13/2023 16:00   raw-data: 0x23061316")
+			__FE_COUT__ << "CFO Design Version:\t" << designVersion << __E__	
+						<< "Expected version:\t" << matchDesignVersion << __E__
+						<< "Match:\t" << (designVersion.compare(matchDesignVersion) == 0) << __E__;
+			
+			if(configure_clock_ && thisCFO_->ReadDesignDate() == "Jun/13/2023 16:00   raw-data: 0x23061316")
 			{
 				// only configure the clock/crystal the first loop through...
 
@@ -764,9 +952,9 @@ void CFOFrontEndInterface::configureForTimingChain(int step /* = -1 */)
 					// registerWrite(0x9160, 0x09502F90);
 
 					// set RST_REG bit
-					thisCFO_->WriteSERDESIICInterface(
-						DTC_IICSERDESBusAddress::DTC_IICSERDESBusAddress_EVB /* device */, 
-						0x87 /* address */, 0x01 /* data */);
+					thisCFO_->WriteSERDESIICInterface(DTC_IICSERDESBusAddress::DTC_IICSERDESBusAddress_EVB /* device */, 
+													  0x87 /* address */, 
+													  0x01 /* data */);
 				}
 
 				// registerWrite(0x9168, 0x55870100);
@@ -803,9 +991,10 @@ void CFOFrontEndInterface::configureForTimingChain(int step /* = -1 */)
 			break;
 		case 1:
 			{
+				__FE_COUT__ << "CFO go to next sub-iteration! step: " << step << __E__;
 				if(configure_clock_)
 				{
-					uint32_t select      = 0;
+					uint32_t select = 0;
 					try
 					{
 						select = getSelfNode()
@@ -849,19 +1038,16 @@ void CFOFrontEndInterface::configureForTimingChain(int step /* = -1 */)
 			__FE_COUT__ << "Do nothing while other configurable entities finish..." << __E__;
 	}	
 
-
-	
-	
-	
-	
-	
-
 }  // end configureForTimingChain()
 
 //==============================================================================
 void CFOFrontEndInterface::halt(void)
 {
 	__FE_COUT__ << "HALT: CFO status" << __E__;
+
+
+	thisCFO_->DisableBeamOffMode(CFOLib::CFO_Link_ID::CFO_Link_ALL);
+
 	// if(regWriteMonitorStream_.is_open())
 	// {
 	// 	regWriteMonitorStream_ << "Timestamp: " << std::dec << time(0) << 
@@ -901,8 +1087,17 @@ void CFOFrontEndInterface::resume(void)
 }
 
 //==============================================================================
-void CFOFrontEndInterface::start(std::string)  // runNumber)
+void CFOFrontEndInterface::start(std::string runNumber)  // runNumber)
 {
+	__FE_COUTV__(getIterationIndex());
+	__FE_COUTV__(getSubIterationIndex());
+
+	if(operatingMode_ == CFOandDTCCoreVInterface::CONFIG_MODE_LOOPBACK)
+	{
+		__FE_COUT_INFO__ << "Start the loopback!" << __E__;
+		loopbackTest(runNumber);
+		__FE_COUT_INFO__ << "End the loopback!" << __E__;
+	}
 	// if(regWriteMonitorStream_.is_open())
 	// {
 	// 	regWriteMonitorStream_ << "Timestamp: " << std::dec << time(0) << 
@@ -910,8 +1105,6 @@ void CFOFrontEndInterface::start(std::string)  // runNumber)
 	// 	regWriteMonitorStream_.flush();
 	// }
 
-	__MCOUT_INFO__("CFO Ignoring loopback for now..." << __E__);
-	return;
 /* COMMENTED 20-Jun-2023 by rrivera to start using CFO_Register directly.. will need to add features to support loopback revival
 
 	//bool LoopbackLock = true;
@@ -1284,7 +1477,7 @@ void CFOFrontEndInterface::ReadCFO(__ARGS__)
 	dtc_address_t address = __GET_ARG_IN__("address", dtc_address_t);
 	__FE_COUTV__((unsigned int)address);
 	dtc_data_t readData;// = registerRead(address);  
-
+	
 	int errorCode = getDevice()->read_register(address, 100, &readData);
 	if (errorCode != 0)
 	{
@@ -1344,12 +1537,11 @@ void CFOFrontEndInterface::CompileRunplan(__ARGS__)
 	std::ifstream inFile;
 	std::ofstream outFile;
 
-	std::string inFileName;// = __GET_ARG_IN__("Input Text Run Plan", std::string);
-	std::string outFileName;// = __GET_ARG_IN__("Output Binary Run File", std::string);
-	inFileName = 
-		"/home/mu2estm/ots/srcs/mu2e_pcie_utils/cfoInterfaceLib/Commands.txt";
-	outFileName = 
-		"/home/mu2estm/ots/srcs/mu2e_pcie_utils/cfoInterfaceLib/Commands.bin";
+	const std::string SOURCE_BASE_PATH = std::string(__ENV__("MRB_SOURCE")) + 
+		"/mu2e_pcie_utils/cfoInterfaceLib/";
+
+	std::string inFileName  = __GET_ARG_IN__("Input Text File", std::string, SOURCE_BASE_PATH + "Commands.txt");
+	std::string outFileName = __GET_ARG_IN__("Output Binary File", std::string, SOURCE_BASE_PATH + "Commands.bin");
 
 	inFile.open(inFileName.c_str(), std::ios::in);
 	if (!(inFile.is_open()))
@@ -1381,6 +1573,11 @@ void CFOFrontEndInterface::CompileRunplan(__ARGS__)
 		outFile << c;
 	}
 	outFile.close();
+
+	std::stringstream resultSs;
+	resultSs << "Run plan text file: " << inFileName << __E__ <<
+		"was compiled to binary: " << outFileName << __E__;
+	__SET_ARG_OUT__("Result", resultSs.str());
 } //end CompileRunplan()
 
 
@@ -1392,10 +1589,9 @@ void CFOFrontEndInterface::SetRunplan(__ARGS__)
 
 	__FE_COUT__ << "Set CFO Run Plan"  << __E__;
 
-	std::string setFileName;// = __GET_ARG_IN__("Binary Run File", std::string);
-	setFileName =
-		"/home/mu2estm/ots/srcs/mu2e_pcie_utils/cfoInterfaceLib/Commands.bin";
-
+	const std::string SOURCE_BASE_PATH = std::string(__ENV__("MRB_SOURCE")) + 
+		"/mu2e_pcie_utils/cfoInterfaceLib/";
+	std::string setFileName = __GET_ARG_IN__("Binary Run File", std::string, SOURCE_BASE_PATH + "Commands.bin");
 	
 	std::ifstream file(setFileName, std::ios::binary | std::ios::ate);
 	if (file.eof())
@@ -1417,6 +1613,9 @@ void CFOFrontEndInterface::SetRunplan(__ARGS__)
 	//set the file in hardware:
 	thisCFO_->GetDevice()->write_data(DTC_DMA_Engine_DAQ, inputData, sizeof(inputData));
 
+	std::stringstream resultSs;
+	resultSs << "Downloaded to CFO binary run plan file: " << setFileName << __E__;
+	__SET_ARG_OUT__("Result", resultSs.str());
 } //end SetRunplan()
 
 //========================================================================
@@ -1441,6 +1640,9 @@ void CFOFrontEndInterface::LaunchRunplan(__ARGS__)
 //========================================================================
 void CFOFrontEndInterface::CFOReset(__ARGS__) { thisCFO_->ResetCFO(); }
 
+//========================================================================
+void CFOFrontEndInterface::CFOHalt(__ARGS__) { halt(); }
+
 //==============================================================================
 // GetFirmwareVersion
  void CFOFrontEndInterface::GetFirmwareVersion(__ARGS__)
@@ -1451,9 +1653,14 @@ void CFOFrontEndInterface::CFOReset(__ARGS__) { thisCFO_->ResetCFO(); }
 //========================================================================
 void CFOFrontEndInterface::GetStatus(__ARGS__)
 {	
-	//call virtual readStatus
-	__SET_ARG_OUT__("Status", thisCFO_->FormattedRegDump(20));
+	__SET_ARG_OUT__("Status", thisCFO_->FormattedRegDump(20, thisCFO_->formattedDumpFunctions_));
 } //end GetStatus()
+
+//========================================================================
+void CFOFrontEndInterface::GetCounters(__ARGS__)
+{	
+	__SET_ARG_OUT__("Status", thisCFO_->FormattedRegDump(20, thisCFO_->formattedCounterFunctions_));
+} //end GetCounters()
 
 //========================================================================
 void CFOFrontEndInterface::ConfigureForTimingChain(__ARGS__)
@@ -1468,6 +1675,128 @@ void CFOFrontEndInterface::ConfigureForTimingChain(__ARGS__)
 	// configureForTimingChain(1);
 
 } //end ConfigureForTimingChain()
+
+//========================================================================
+void CFOFrontEndInterface::loopbackTest(std::string runNumber, int step)
+{	
+	__FE_COUT__ << "Starting loopback test for run " << runNumber << ", step " << step << __E__;
+	// TODO: read from configuratione
+	
+	const int ROCsPerDTC = 6;
+	const unsigned int n_loopbacks = getConfigurationManager()
+	        							->getNode("/Mu2eGlobalsTable/SyncDemoConfig/NumberOfLoopbacks").getValue<unsigned int>();
+	const unsigned int DTCsPerChain = 8;//getConfigurationManager()
+	        							//->getNode("/Mu2eGlobalsTable/SyncDemoConfig/DTCsPerChain").getValue<unsigned int>();
+	
+	const int alignment_marker = 10;	// TODO: check with the firmware
+	unsigned int n_steps = DTCsPerChain * ROCsPerDTC;
+
+	if (step == -1)
+		step = getIterationIndex();	// get the current index
+
+	// alternate with the DTCs
+	if ((step % 2) == 0)
+	{
+		indicateIterationWork();
+		__FE_COUT__ << "Step " << step << " is even, letting DTCs have a turn" << __E__;
+		return;
+	}
+
+	unsigned int loopback_step = step / 2;
+	// end by restoring the status of the registers
+	if (loopback_step >= n_steps)	
+	{
+		__FE_COUT__ << "Loopback over!" << __E__;
+		return;
+	}
+
+	// send the markers  and compute the average delay
+	int active_DTC = loopback_step / ROCsPerDTC;
+	int active_ROC = loopback_step % ROCsPerDTC;
+
+	__FE_COUT__ << "step " << loopback_step << ") active DTC: " << active_DTC 
+				<< " active ROC on link: " << active_ROC << __E__;
+	
+	// TODO: put it in a directory
+	FILE* fp = 0;
+	std::string filename = "/loopbackOutput_" + runNumber + ".txt";
+	
+	__FE_COUT__ << "Sending " << n_loopbacks << " markers on all the links..." << __E__; 
+	for (auto link: CFOLib::CFO_Links)
+	{
+		__FE_COUT__ << "step " << loopback_step << ") CFO sending markers on" << __E__ 
+							   << "CFO link:\t" << link << __E__
+							   << "target DTC:\t" << active_DTC << __E__
+							   << "target ROC:\t" << active_ROC << __E__; 
+		unsigned int comulative_delay = 0;
+		float average_delay = 0.0;
+		bool timeout = false;
+
+		// sending first marker to align the clock of the ROC
+		for (unsigned int n = 0; n < alignment_marker; ++n)
+		{
+			measureDelay(link);
+		}
+
+		for (unsigned int n = 0; n < n_loopbacks; ++n)
+		{
+			std::bitset<32> delay (measureDelay(link));
+			// check if the marker return timeout
+			if (delay.all())
+			{
+				__FE_COUT__ << "Timeout link: " << link << __E__;
+				timeout = true;
+				break;
+			}
+			comulative_delay += delay.to_ulong();
+			__FE_COUT__ << "step " << loopback_step << ") Delay measured on link " 
+						<< link << ": " << delay.to_ulong() << __E__; 
+
+		}
+		// compute the average
+		average_delay = comulative_delay / n_loopbacks;
+		__FE_COUT__ << "step " << loopback_step << ") Average Delay on link " 
+					<< link << ": " << average_delay << __E__; 
+
+		// save the results on file
+		try
+		{
+			// open the file if it is the first time
+			if (!fp)
+			{
+				__FE_COUT__ << "File " << filename << " open." << __E__; 
+				fp = fopen((std::string(__ENV__("OTSDAQ_DATA")) + filename).c_str(), "a");
+			}
+			// write the information
+			fprintf(fp, "############################\n");
+			fprintf(fp, "Chain:\t%d\n", link);
+			fprintf(fp, "DTC:\t%d\n", active_DTC);
+			fprintf(fp, "ROC:\t%d\n", active_ROC);
+			if (timeout)
+				fprintf(fp, "Delay:\tTIMEOUT\n");
+			else
+				fprintf(fp, "Delay:\t%f\n", average_delay);
+		}
+		catch(...)  // handle file close on error
+		{
+			if(fp)
+			{
+				__FE_COUT__ << "Error occurs: File close." << __E__; 
+				fclose(fp);
+			}
+			throw;
+		}
+	}
+
+	// close the file
+	if(fp)
+	{
+		__FE_COUT__ << "File close." << __E__; 
+		fclose(fp);
+	}
+		
+	indicateIterationWork();
+} //end loopbackTest()
 
 
 DEFINE_OTS_INTERFACE(CFOFrontEndInterface)

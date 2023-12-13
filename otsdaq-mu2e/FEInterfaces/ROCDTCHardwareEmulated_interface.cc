@@ -41,10 +41,10 @@ uint16_t ROCDTCHardwareEmulated::readEmulatorRegister(uint16_t address)
 	return -1;
 }  // end readEmulatorRegister
 //==================================================================================================
-void ROCDTCHardwareEmulated::readEmulatorBlock(std::vector<uint16_t>& data,
-                                               uint16_t               address,
-                                               uint16_t               numberOfReads,
-                                               bool                   incrementAddress)
+void ROCDTCHardwareEmulated::readEmulatorBlock(std::vector<DTCLib::roc_data_t>& 	data,
+                                             DTCLib::roc_address_t  	   	address,
+                                             uint16_t               		numberOfReads,
+                                             bool                   		incrementAddress)
 {
 	__FE_COUT__ << "Calling read emulator BLOCK: link number " << std::dec << linkID_
 	            << ", address = " << address << ", numberOfReads = " << numberOfReads
@@ -57,57 +57,30 @@ void ROCDTCHardwareEmulated::readEmulatorBlock(std::vector<uint16_t>& data,
 }  // end readEmulatorBlock
 
 //==================================================================================================
-void ROCDTCHardwareEmulated::writeROCRegister(uint16_t address, uint16_t data_to_write)
+void ROCDTCHardwareEmulated::universalBlockRead(char* address, char* returnValue, unsigned int numberOfBytes)
 {
-	__FE_COUT__ << "Calling write ROC register: link number " << std::dec << linkID_
-	            << ", address = " << address << ", write data = " << data_to_write
-	            << __E__;
+	uint16_t numberOfReads = numberOfBytes/sizeof(uint16_t);
+	bool incrementAddress = true;
+	std::vector<DTCLib::roc_data_t> data;
+	readROCBlock(data,*((DTCLib::roc_address_t*)address),numberOfReads,incrementAddress);
 
-	bool acknowledge_request = false;
-
-	thisDTC_->WriteROCRegister(linkID_, address, data_to_write, acknowledge_request, 0);
-
-}  // end writeROCRegister()
-
-//==================================================================================================
-uint16_t ROCDTCHardwareEmulated::readROCRegister(uint16_t address)
-{
-	__FE_COUT__ << "Calling read ROC register: link number " << std::dec << linkID_
-	            << ", address = " << address << __E__;
-
-	uint16_t read_data = 0;
-
-	try
-	{
-		read_data = thisDTC_->ReadROCRegister(linkID_, address, 1);
-	}
-	catch(...)
-	{
-		__FE_COUT_ERR__ << "DTC failed DCS read" << __E__;
-		read_data = -999;
-	}
-
-	return read_data;
-}  // end readROCRegister()
-
-//==================================================================================================
-void ROCDTCHardwareEmulated::readROCBlock(std::vector<uint16_t>& data,
-                                             uint16_t               address,
-                                             uint16_t               numberOfReads,
-                                             bool                   incrementAddress)
-{
-	__FE_COUT__ << "Calling read ROC block: link number " << std::dec << linkID_
-	            << ", address = " << address << ", numberOfReads = " << numberOfReads
-	            << ", incrementAddress = " << incrementAddress << __E__;
-
-	__FE_COUTV__(data.size());
-	thisDTC_->ReadROCBlock(data, linkID_, address, numberOfReads, incrementAddress, 0);
-	__FE_COUTV__(data.size());
+	std::memcpy(&data[0],returnValue,numberOfBytes);
+	__SS__;
+	for(unsigned int i = 0 ; i < numberOfReads; ++i)
+		ss << std::hex << std::setfill('0') << std::setw(2) << data[i] << __E__;
+	__FE_COUT__ << ss.str();
 	
-}  // end readROCBlock()
+}  // end universalBlockRead()
+
 
 //==================================================================================================
-int ROCDTCHardwareEmulated::readTimestamp() { return this->readRegister(12); }
+void ROCDTCHardwareEmulated::GetStatus() { __SS__ << "TODO"; __SS_THROW__; }
+
+//==================================================================================================
+void ROCDTCHardwareEmulated::GetFirmwareVersion() { __SS__ << "TODO"; __SS_THROW__; }
+
+//==================================================================================================
+int ROCDTCHardwareEmulated::readInjectedPulseTimestamp() { return this->readRegister(12); }
 
 //==================================================================================================
 void ROCDTCHardwareEmulated::writeDelay(uint16_t delay)
@@ -147,7 +120,12 @@ catch(const std::runtime_error& e)
 catch(...)
 {
 	__FE_SS__ << "Unknown error caught. Check printouts!" << __E__;
-	__FE_MOUT__ << ss.str();
+	try	{ throw; } //one more try to printout extra info
+	catch(const std::exception &e)
+	{
+		ss << "Exception message: " << e.what();
+	}
+	catch(...){}
 	__FE_SS_THROW__;
 }  // end configure() catch
 

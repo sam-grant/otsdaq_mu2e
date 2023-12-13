@@ -7,7 +7,7 @@ using namespace ots;
 ROCCoreVInterface::ROCCoreVInterface(const std::string&       rocUID,
                                      const ConfigurationTree& theXDAQContextConfigTree,
                                      const std::string&       theConfigurationPath)
-    : FEVInterface(rocUID, theXDAQContextConfigTree, theConfigurationPath)
+    : FEVInterface(rocUID, theXDAQContextConfigTree, theConfigurationPath)	
     , thisDTC_(0)
     , delay_(getSelfNode().getNode("EventWindowDelayOffset").getValue<unsigned int>())
     , tmo_ms_(100)
@@ -19,12 +19,14 @@ ROCCoreVInterface::ROCCoreVInterface(const std::string&       rocUID,
 
 	INIT_MF("." /*directory used is USER_DATA/LOG/.*/);
 
+	FEVInterface::universalAddressSize_ = sizeof(uint16_t);
+	FEVInterface::universalDataSize_ = sizeof(uint16_t);
 	linkID_ =
 	    DTCLib::DTC_Link_ID(getSelfNode().getNode("linkID").getValue<unsigned int>());
 
 	__FE_COUT_INFO__ << "ROCCoreVInterface instantiated with link: " << linkID_
 	                 << " and EventWindowDelayOffset = " << delay_ << __E__;
-
+	
 	__FE_COUT__ << "Constructed." << __E__;
 }  // end constructor()
 
@@ -85,10 +87,17 @@ DTCLib::roc_data_t ROCCoreVInterface::readRegister(DTCLib::roc_address_t address
 catch(...)
 {
 	__SS__ << "read exception caught: \n\n" << StringMacros::stackTrace() << __E__;
+	try	{ throw; } //one more try to printout extra info
+	catch(const std::exception &e)
+	{
+		ss << "Exception message: " << e.what();
+	}
+	catch(...){}
 	__FE_COUT_ERR__ << ss.str();
 	throw;
-}
-//
+} // end readRegister() catch
+
+//==================================================================================================
 void ROCCoreVInterface::readBlock(std::vector<DTCLib::roc_data_t>& data,
                                   DTCLib::roc_address_t            address,
                                   uint16_t                         wordCount,
@@ -100,7 +109,7 @@ void ROCCoreVInterface::readBlock(std::vector<DTCLib::roc_data_t>& data,
 
 	if(emulatorMode_)
 	{
-		__FE_COUT__ << "Emulator mode read." << __E__;
+		__FE_COUT__ << "Emulator mode read block." << __E__;
 		std::lock_guard<std::mutex> lock(workLoopMutex_);
 		return readEmulatorBlock(data, address, wordCount, incrementAddress);
 	}
@@ -109,8 +118,149 @@ void ROCCoreVInterface::readBlock(std::vector<DTCLib::roc_data_t>& data,
 
 }  // end readBlock()
 
+//==================================================================================================
+void ROCCoreVInterface::writeBlock(const std::vector<DTCLib::roc_data_t>& writeData,
+                                  DTCLib::roc_address_t            address,
+                                  bool                             incrementAddress,
+                                  bool                             requestAck /* = true */)
+{
+	__FE_COUT__ << "Calling write ROC block: link number " << std::dec << linkID_
+	            << ", address = " << address << ", wordCount = " << writeData.size()
+	            << ", incrementAddress = " << incrementAddress 
+	            << ", requestAck = " << requestAck << __E__;
+
+	if(emulatorMode_)
+	{
+		__FE_COUT__ << "Emulator mode write block." << __E__;
+		std::lock_guard<std::mutex> lock(workLoopMutex_);
+		return writeEmulatorBlock(writeData, address, incrementAddress, requestAck);
+	}
+	else
+		return writeROCBlock(writeData, address, incrementAddress, requestAck);
+
+}  // end readBlock()
+
+
+//==========================================================================================
+// universalRead
+//	Must implement this function for Macro Maker and Slow Controls to work with this
+// interface. 	When Macro Maker calls:
+//		- address will be a [universalAddressSize_] byte long char array
+//		- returnValue will be a [universalDataSize_] byte long char
+// array
+//		- expects exception thrown on failure/timeout
+void ROCCoreVInterface::universalRead(char* address, char* returnValue)
+{
+	// __FE_COUT__ << "ROC READ" << __E__;
+
+	if(emulatorMode_)
+	{
+		__FE_COUT__ << "Emulator read " << __E__;
+
+		for(unsigned int i = 0; i < universalDataSize_; ++i)
+			returnValue[i] = (0xE0 | i) + rand() % 100;
+		return;
+	}
+
+	(*((DTCLib::roc_data_t*)returnValue)) = readRegister(*((DTCLib::roc_address_t*) address));
+
+}  // end universalRead()
+
+//=====================================================================================
+// universalWrite
+//	Must implement this function for Macro Maker to work with this
+// interface. 	When Macro Maker calls:
+//		- address will be a [universalAddressSize_] byte long char array
+//		- writeValue will be a [universalDataSize_] byte long char array
+void ROCCoreVInterface::universalWrite(char* address, char* writeValue)
+{
+	// __FE_COUT__ << "ROC WRITE" << __E__;
+	if(emulatorMode_)
+	{
+		__FE_COUT__ << "Emulator write " << __E__;
+		return;
+	}
+
+	writeRegister(*((DTCLib::roc_address_t*)address), *((DTCLib::roc_data_t*) writeValue));
+		
+}  // end universalWrite()
+
+//==================================================================================================
+void ROCCoreVInterface::writeROCRegister(uint16_t address, uint16_t data_to_write)
+{
+	__FE_COUT__ << "Calling write ROC register: link number " << std::dec << linkID_
+	            << ", address = " << address << ", write data = " << data_to_write
+	            << __E__;
+
+	bool acknowledge_request = false;
+
+	thisDTC_->WriteROCRegister(linkID_, address, data_to_write, acknowledge_request, 0);
+
+}  // end writeROCRegister()
+
+//==================================================================================================
+uint16_t ROCCoreVInterface::readROCRegister(uint16_t address)
+{
+	__FE_COUT__ << "Calling read ROC register: link number " << std::dec << linkID_
+	            << ", address = " << address << __E__;
+
+	uint16_t read_data = 0;
+
+	try
+	{
+		read_data = thisDTC_->ReadROCRegister(linkID_, address, 1);
+	}
+	catch(...)
+	{
+		__FE_COUT_ERR__ << "DTC failed DCS read" << __E__;
+		// read_data = -999;
+		throw;
+	}
+
+	return read_data;
+}  // end readROCRegister()
+
+//==================================================================================================
+void ROCCoreVInterface::readROCBlock(std::vector<DTCLib::roc_data_t>& 	data,
+                                             DTCLib::roc_address_t  	   	address,
+                                             uint16_t               		numberOfReads,
+                                             bool                   		incrementAddress)
+{
+	__FE_COUT__ << "Calling read ROC block: link number " << std::dec << linkID_
+	            << ", address = " << address << ", numberOfReads = " << numberOfReads
+	            << ", incrementAddress = " << incrementAddress << __E__;
+
+	__FE_COUTV__(data.size());
+	thisDTC_->ReadROCBlock(data, linkID_, address, numberOfReads, incrementAddress, 0);
+	__FE_COUTV__(data.size());
+
+	if(data.size() != numberOfReads)
+	{
+		__FE_SS__ << "ROC block read failed, expecting " << numberOfReads 
+			<< " words, and read " << data.size() << " words." << __E__;
+		__FE_SS_THROW__;		
+	}
+	
+}  // end readROCBlock()
+
+//==================================================================================================
+void ROCCoreVInterface::writeROCBlock(const std::vector<DTCLib::roc_data_t>& 	writeData,
+											DTCLib::roc_address_t      				address,
+											bool                   					incrementAddress,
+											bool                             		requestAck /* = true */)
+{
+	__FE_COUT__ << "Calling write ROC block: link number " << std::dec << linkID_
+	            << ", address = " << address << ", numberOfWrites = " << writeData.size()
+	            << ", incrementAddress = " << incrementAddress << __E__;
+
+	thisDTC_->WriteROCBlock(linkID_, address, writeData, 
+		false /* requestAck */, 
+		incrementAddress, 0);
+	
+}  // end writeROCBlock()
+
 ////==================================================================================================
-// int ROCCoreVInterface::readTimestamp() { return this->readRegister(12); }
+// int ROCCoreVInterface::readInjectedPulseTimestamp() { return this->readRegister(12); }
 //
 ////==================================================================================================
 // void ROCCoreVInterface::writeDelay(unsigned delay)
@@ -210,6 +360,12 @@ void ROCCoreVInterface::highRateCheckThread(ROCCoreVInterface* roc,
 catch(...)
 {
 	__SS__ << roc->interfaceUID_ << "Error caught. Check printouts!" << __E__;
+	try	{ throw; } //one more try to printout extra info
+	catch(const std::exception &e)
+	{
+		ss << "Exception message: " << e.what();
+	}
+	catch(...){}
 	__MCOUT__(ss.str());
 }  // end highRateCheckThread() catch
 
@@ -300,6 +456,12 @@ void ROCCoreVInterface::highRateBlockCheckThread(ROCCoreVInterface* roc,
 catch(...)
 {
 	__SS__ << roc->interfaceUID_ << "Error caught. Check printouts!" << __E__;
+	try	{ throw; } //one more try to printout extra info
+	catch(const std::exception &e)
+	{
+		ss << "Exception message: " << e.what();
+	}
+	catch(...){}
 	__MCOUT__(ss.str());
 }  // end highRateBlockCheckThread() catch
 
@@ -366,7 +528,12 @@ catch(const std::runtime_error& e)
 catch(...)
 {
 	__FE_SS__ << "Unknown error caught. Check printouts!" << __E__;
-	__FE_MOUT__ << ss.str();
+	try	{ throw; } //one more try to printout extra info
+	catch(const std::exception &e)
+	{
+		ss << "Exception message: " << e.what();
+	}
+	catch(...){}
 	__FE_SS_THROW__;
 }
 
