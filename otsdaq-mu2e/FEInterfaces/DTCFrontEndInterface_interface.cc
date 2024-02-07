@@ -1771,7 +1771,7 @@ void DTCFrontEndInterface::configureDefaultMode(void)
 	}
 	if(is_crv) configureCRV();
 
-	unsigned int roc_dcs_response_timer = 1000; // overwrite default for CRV (FEB responses take a long time)
+	unsigned int roc_dcs_response_timer = 0xffff; // 1000; // overwrite default for CRV (FEB responses take a long time)
 	if(is_crv) roc_dcs_response_timer   = 0x400000;
 	try
 	{
@@ -2856,7 +2856,7 @@ void DTCFrontEndInterface::ReadROC(__ARGS__)
 	    DTCLib::DTC_Link_ID(__GET_ARG_IN__("rocLinkIndex", uint8_t));
 	uint16_t address = __GET_ARG_IN__("address", uint16_t); // uint8_t for ROC reads, but uint16_t for FEB reads
 	__FE_COUTV__(rocLinkIndex);
-	__FE_COUTV__((unsigned int)address);
+	__FE_COUT__ << "address = " << ((unsigned int)address) << std::hex << " 0x" << ((unsigned int)address) << __E__;
 
 	uint16_t readData = -999;
 
