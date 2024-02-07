@@ -140,10 +140,14 @@ unsigned int	DTCInterfaceTable::slowControlsHandlerConfig	(
 				        .getValue<std::string>();
 				__COUTV__(rocPluginType);
 
-				std::string location = fePair.first + "_" + rocChildPair.first;
+				// std::string location = fePair.first + "_" + rocChildPair.first; // Universal read expects location to only refer to the ROC record, not the DTC parent
+				std::string location = rocChildPair.first;
 
 				ConfigurationTree slowControlsLink = rocChildPair.second.getNode(
 				    rocColNames_.colLinkToSlowControlsChannelTable_);
+
+			         __COUT__ << "slowControlsLink:\t" << slowControlsLink << __E__;
+
 				numberOfROCSlowControlsChannels = slowControlsHandler(out,
 				                                                      tabStr,
 				                                                      commentStr,
