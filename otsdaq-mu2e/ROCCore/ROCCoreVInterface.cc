@@ -208,7 +208,8 @@ uint16_t ROCCoreVInterface::readROCRegister(uint16_t address)
 
 	try
 	{
-		read_data = thisDTC_->ReadROCRegister(linkID_, address, 1);
+	         // read_data = thisDTC_->ReadROCRegister(linkID_, address, 1); // 1 ms?? 
+	         read_data = thisDTC_->ReadROCRegister(linkID_, address, 0xFFFF); // Give it the maximum amount of time to wait for a response, for now
 	}
 	catch(...)
 	{
