@@ -1,7 +1,6 @@
 <!-- 
-    Samuel Grant
-    Oct 2023
-    Argonne National Laboratory
+    Samuel Grant -- Jan 2024
+    sgrant@anl.gov
  -->
 
 <!DOCTYPE HTML>
@@ -32,21 +31,12 @@
         }
 
         .legend-container {
-            
-            /* max-width: 1500px;
-            margin: 0 auto; */
-            /* padding: 20px;
-            background-color: #fff;
-            border: 1px solid #ccc; */
 
             display: flex;
             justify-content: left;
             align-items: left;
             /* border: 1px solid #ccc; */
             height: 50px; 
-
-            /* border-radius: 5px; */ */
-            /* box-shadow: 0 0 10px rgba(0, 0, 0, 0.1); */
         }
 
         .legend {
@@ -58,7 +48,6 @@
             align-items: flex-start;
             float: left;
         }
-
 
         /* Add this CSS rule to force a fixed width for the legend items */
         .legend-item {
@@ -107,7 +96,7 @@
         }
 
         .main-title {
-            font-size: 28px;
+            font-size: 32px;
             font-weight: bold;
             text-align: center;
             /* Add other styling properties as needed */
@@ -119,17 +108,6 @@
             max-width: 100%; /* Set a maximum width for responsiveness */
             margin: 0 auto; /* Center the content horizontally */
         }
-
-        /* .pv-table-container { 
-            display: flex;
-            justify-content: center;
-            align-items: left;
-            border: 1px solid #ccc; 
-            height: 150px; 
-            width: 40%;
-            padding: 25px;
-            margin-top: 25px;
-        } */
 
         /* Left column */
         .pv-table-container {
@@ -181,18 +159,6 @@
             border-radius: 10px; */
         }
 
-        /* .pv-plot-container {
-            display: flex;
-            justify-content: center;
-            align-items: left;
-            border: 1px solid #ccc; 
-            width: 50%;
-            padding: 25px;
-            margin-right: 25px;
-            margin-top: 25px;
-            
-        } */
-
         /* Styles for the plot container (right column) */
         .pv-plot-container {
             width: 50%;
@@ -200,6 +166,13 @@
         }
 
         .pv-plot { 
+            font-size: 16px;
+        }
+
+        /* Styles for the plot container (right column) */
+        .start-time-button-container {
+            width: 50%;
+            box-sizing: border-box; /* Include padding in the width */
             font-size: 16px;
         }
 
@@ -243,6 +216,10 @@
                 Alias: "Temperature",
                 System: "DTC0" }
             },
+            {"Mu2e:TDAQ_mu2e:crvDTC0:DTC0_VCCINT_voltage": {
+                Alias: "Voltage (INT)",
+                System: "DTC0" }
+            },
             {"Mu2e:TDAQ_mu2e:crvDTC0:DTC0_VCCBRAM_voltage": {
                 Alias: "Voltage (BRAM)",
                 System: "DTC0" }
@@ -251,18 +228,79 @@
                 Alias: "Voltage (AUX)",
                 System: "DTC0" }
             },
-            {"Mu2e:TDAQ_mu2e:crvDTC0:DTC0_VCCINT_voltage": {
-                Alias: "Voltage (INT)",
-                System: "DTC0" }
-            },
-            {"Mu2e:TDAQ_mu2e:crvDTC0_crvROC0:ROC0_p1_voltage": {
+            {"Mu2e:TDAQ_mu2e:crvROC0:ROC0_p1_voltage": {
                 Alias: "Voltage (P1)",
                 System: "ROC0" }
             },     
-            {"Mu2e:TDAQ_mu2e:crvDTC0_crvROC0:ROC0_p1_current": {
+            {"Mu2e:TDAQ_mu2e:crvROC0:ROC0_p1_current": {
                 Alias: "Current (P1)",
                 System: "ROC0" }
-            }        
+            },
+            // {"Mu2e:TDAQ_mu2e:crvROC0:ROC0_counter": {
+            //     Alias: "Counter (P1)",
+            //     System: "ROC0" }
+            // },
+            {"Mu2e:TDAQ_mu2e:crvROC0:FEB0_temperature": {
+                Alias: "Temperature",
+                System: "FEB0" }
+            },
+            {"Mu2e:TDAQ_mu2e:crvROC0:FEB0_ADC_bias_0": {
+                Alias: "ADC bias 0",
+                System: "FEB0"},
+            },
+            {"Mu2e:TDAQ_mu2e:crvROC0:FEB0_ADC_bias_1": {
+                Alias: "ADC bias 1",
+                System: "FEB0"}
+            },
+            {"Mu2e:TDAQ_mu2e:crvROC0:FEB0_ADC_bias_2": {
+                Alias: "ADC bias 2",
+                System: "FEB0"}
+            },
+            {"Mu2e:TDAQ_mu2e:crvROC0:FEB0_ADC_bias_3": {
+                Alias: "ADC bias 3",
+                System: "FEB0"}
+            },
+            {"Mu2e:TDAQ_mu2e:crvROC0:FEB0_ADC_bias_4": {
+                Alias: "ADC bias 4",
+                System: "FEB0"}
+            },
+            {"Mu2e:TDAQ_mu2e:crvROC0:FEB0_ADC_bias_5": {
+                Alias: "ADC bias 5",
+                System: "FEB0"}
+            },
+            {"Mu2e:TDAQ_mu2e:crvROC0:FEB0_ADC_bias_6": {
+                Alias: "ADC bias 6",
+                System: "FEB0"}
+            },
+            {"Mu2e:TDAQ_mu2e:crvROC0:FEB0_ADC_bias_7": {
+                Alias: "ADC bias 7",
+                System: "FEB0"}
+            },
+            {"Mu2e:TDAQ_mu2e:crvROC0:FEB0_CMB0_temperature": {
+                Alias: "CMB0 temperature",
+                System: "FEB0"}
+            },
+            {"Mu2e:TDAQ_mu2e:crvROC0:FEB0_CMB1_temperature": {
+                Alias: "CMB1 temperature",
+                System: "FEB0"}
+            },
+            {"Mu2e:TDAQ_mu2e:crvROC0:FEB0_CMB2_temperature": {
+                Alias: "CMB2 temperature",
+                System: "FEB0"}
+            },
+            {"Mu2e:TDAQ_mu2e:crvROC0:FEB0_CMB3_temperature": {
+                Alias: "CMB3 temperature",
+                System: "FEB0"}
+            }//,
+            // {"Mu2e:TDAQ_mu2e:crvROC0:FEB0_DAC_bias_0": {
+            //     Alias: "DAC bias 0",
+            //     System: "FEB0"}
+            // },
+            // {"Mu2e:TDAQ_mu2e:crvROC0:FEB0_DAC_bias_1": {
+            //     Alias: "DAC bias 1",
+            //     System: "FEB0"}
+            // }
+
         ];
 
         // ---------- Setup page ----------
@@ -411,20 +449,20 @@
 
         function checkPvTime(widget, pvName, pvTime) {
             console.log("Checking PV time for", pvName)
-            var actualTime = Math.floor(Date.now())/1000;
+            var timeNow = Math.floor(Date.now())/1000;
             var time2compare = pvTime*1. + 1200;//10.*page_.widgets[widget].pvList[pvName]/1000;
             console.log(
                             "Date now: "
-                        + actualTime
+                        + timeNow
                         + " pvtime: "
                         + pvTime
-                        + " time2compare - actualTime: "
-                        + (time2compare - actualTime)
+                        + " time2compare - timeNow: "
+                        + (time2compare - timeNow)
                         + " refresh rate: "
                         + page_.widgets[widget].pvList[pvName]
                         );
 
-            if ((pvTime !== undefined) && (time2compare > actualTime)) return true;
+            if ((pvTime !== undefined) && (time2compare > timeNow)) return true;
             return false;
         }
 
@@ -445,7 +483,7 @@
 
             console.log("Filling table: " + widgetSysNameElement + " " + widgetPvNameElement + " " + widgetValueElement)
 
-            var actualTime = Math.floor(Date.now())/1000;
+            var timeNow = Math.floor(Date.now())/1000;
 
             if (widgetPvNameElement == null && widgetPvNameElement == undefined) {
                 console.log("Error: widgetNameElement undefined!")
@@ -518,13 +556,6 @@
             }
 
             console.log("Finished drawing new value")
-
-            // Draw a graph on loading
-            // if(==true) { 
-            
-            //     firstCall = false;
-            // }
-
         } 
 
         // ---------- Poll server ----------
@@ -559,10 +590,6 @@
             console.log("Handling server poll request: ", req.responseText);
 
             var jsonStr = DesktopContent.getXMLValue(req, "JSON");
-
-            // jsonStr = jsonStr.replace(/\s/g, ''); //hack for removing whitespace 
-            // if(!jsonStr || jsonStr == "") return;
-            // Debug.log(jsonStr);
 
             var serverResponse = JSON.parse(jsonStr);
             console.log("Server response :", serverResponse);
@@ -644,11 +671,31 @@
 
         // ---------- Plotting / PV history ----------
 
-        // function showGraphPeriod(period /*days*/) {
-		// 		var actualTime = Math.floor(Date.now())/1000;
-		// 		var startTime = actualTime - period*24*3600;
-		// 		drawGraph(0, startTime, actualTime);
-	    // } 
+        // page_.widgets[widget].el.innerHTML = "<button class='pvButton' onclick='drawGraph(" + widget + ")'>" + pvValue + " " + units + "</button>";
+
+
+        // Get graph start time from dropdown
+        function getStartTime() {
+
+            var dropdown = document.getElementById("startTimeDropdown");
+            var startTime = dropdown.value;
+
+            if (!startTime) {
+                startTime = 1; // default is 1 hour
+            } 
+
+            if (startTime === "custom") {
+                // Get custom time from the input field
+                var customInputContainer = document.getElementById("customInputContainer");
+                customInputContainer.style.display = 'block'; // Show the custom start time container
+                var customInput = document.getElementById("customInput");
+                startTime = parseFloat(customInput.value);
+                console.log("Custom start time: " + startTime)
+            } 
+
+            return startTime
+
+        }
 
         function drawGraph(widget) {
 
@@ -666,10 +713,13 @@
 
             makeGraph(widget);
 
-            var actualTime = Math.floor(Date.now())/1000;
-            var startTime = actualTime - 6*24*3600;
+            var startTimeContainer = document.getElementById('startTimeContainer');
+            startTimeContainer.style.display = 'block'; // Show the start time container
 
-            getPvHistory(widget, plotParameters_, startTime, actualTime);
+            var timeNow = Math.floor(Date.now())/1000;
+            var startTime =  timeNow - getStartTime()*3600; //  timeNow - 1*3600; // This doesn't work for whatever reason
+            
+            getPvHistory(widget, plotParameters_, startTime, timeNow);
 
             actualGraphId_ = widget;
 
@@ -747,6 +797,7 @@
             }
 
             var passParams = [widget, parameters];
+
             DesktopContent.XMLHttpRequest("Request?RequestType=getPvArchiverData",
                                 //post data 
                                 "pvList=" + pvList + 
@@ -765,22 +816,20 @@
             var jsonArr = req.responseXML.getElementsByTagName("JSON");
             console.log("Handling PV history request ", jsonArr);
 
-            var id = passParams[0];
+            var widget= passParams[0];
             var parameters = passParams[1];
-            console.log("id: " + id + " parameter: " + parameters);
+            console.log("widget: " + widget + " parameter: " + parameters);
 
             for (var i = jsonArr.length - 1; i >= 0; i--){
                 var history = JSON.parse(DesktopContent.getXMLValue(jsonArr[i]));				
 
-                for (var pv in history) {
-                    // console.log("DEBUG:")
-                    console.log(pv);
-                    console.log(history[pv].Timestamp + " " + history[pv].Value);
-                    drawNewGraphValue(pv, pv, history[pv].Value, history[pv].Timestamp, history[pv].Status, history[pv].Severity);
+                for (var pvName in history) {
+                    // console.log("Drawing new graph value for\n" + pvName + "at " + history[pvName].Timestamp)
+                    drawNewGraphValue(widget, pvName, history[pvName].Value, history[pvName].Timestamp, history[pvName].Status, history[pvName].Severity);
                 }
+
             }
         } 
-
 
         // Update graph
 
@@ -795,8 +844,7 @@
 
             // Get date
             var date = new Date(pvTime * 1000);
-
-            var actualTime = Math.floor(Date.now())/1000;
+            var timeNow = Math.floor(Date.now())/1000;
 
             if (plotTimeData_[pvName] !== undefined && plotTimeData_[pvName].length) {
                 // Skip if this data point has already been plotted
@@ -883,75 +931,6 @@
             console.log("Finished drawing new value for", pvName);
 
         }
-
-        // function drawNewGraphValue(widget, pvName, pvValue, pvTime, pvStatus, pvSeverity) {
-
-        //     console.log("Drawing new graph value")
-
-        //     // Get date
-        //     var date = new Date(pvTime*1000);
-            
-        //     if (plotTimeData_[pvName] !== undefined && plotTimeData_[pvName].length) {
-
-        //         // Skip if this data point has already been plotted
-        //         if ((date <= plotTimeData_[pvName][plotTimeData_.length-1])) {
-        //             console.log("Point already plotted, returning"); return;
-        //         }
-        //     }
-
-        //     if (plotTimeData_[pvName] !== undefined) plotTimeData_[pvName].push(date);
-        //     if (plotValueData_[pvName] !== undefined) plotValueData_[pvName].push(pvValue);
-
-        //     console.log("Strip Chart newValue() reached", pvName, pvValue);
-
-        //     console.log(plotTimeData_);
-        //     console.log(plotValueData_);				
-        //     var plot = document.getElementById("pvPlot");
-
-        //     // Define alarm colour in table
-        //     var plotColor = "grey"; // default for "undefined"
-        //     if (pvSeverity == "NO_ALARM" ) plotColor = "green";
-        //     else if (pvSeverity == "MINOR" ) plotColor = "orange";
-        //     else if (pvSeverity == "MAJOR" ) plotColor = "red";
-
-        //     if (Object.getOwnPropertyNames(plotPvList_).length == 1)
-
-        //     Plotly.relayout(plot, {
-        //         width: plot.innerWidth
-        //         , height: plot.innerHeight
-        //         , title: pvName + "<br>Status: " + pvStatus + "<br>Severity: " + pvSeverity
-        //         , titlefont: { size: 12, color: plotColor }
-        //     });
-
-        
-
-        //     var ntraces = [];
-        //     var traces = [];
-        //     var i = 0;
-
-        //     for (pv in plotPvList_)
-        //     {
-        //         ntraces.push(i);
-
-        //         var xval = [];
-        //         var yval = [];
-        //         if (plotTimeData_[pv] !== undefined && plotValueData_[pv] !== undefined)
-        //         {
-        //             var xval = plotTimeData_[pv];
-        //             var yval = plotValueData_[pv];
-        //         }
-        //         var trace = { x: xval, y: yval, type: plotParameters_["trace_type"], mode: plotParameters_["trace_mode"], name: pv, visible: (plot.data[i].visible == true) ? true : 'legendonly'};
-        //         traces.push(trace);
-        //         //Plotly.deleteTraces(plot, i);
-        //         i++;
-        //     }
-        //     if (ntraces.length) Plotly.deleteTraces(plot, ntraces);
-        //     if (traces.length) Plotly.addTraces(plot, traces);
-        //     //Plotly.extendTraces(plot, { x: plotData[pvName].time, y: plotData[pvName+1].value }, [PVList[pvName]]);
-
-        //     console.log("Finished drawing new value for ", pvName);
-
-        // }
 
         // ---------- Table builder ----------
         function makePvTable() {
@@ -1113,17 +1092,44 @@
 
         <!--- PV plot -->
         <div class="pv-plot-container">
-            <div class="pv-plot" id="pvPlot"> </div> 
-        </div>  
-    </div>
+            <div class="pv-plot" id="pvPlot"> </div>  
 
-    <!--- Notes -->
-    <!-- <div class="developer-notes">
-        <h2>TODO:</h2>
-        <ul>
-            <li>Define alarm conditions</li>
-        </ul>
-    </div> -->
+            <div id="startTimeContainer" style="display: none;">
+                <label for="startTimeDropdown" style="font-size: 18px;">Select start time:</label>
+                <select id="startTimeDropdown" style="font-size: 18px;">
+                    <option value="1">1 hour ago</option>
+                    <option value="6">6 hours ago</option>
+                    <option value="12">12 hours ago</option>
+                    <option value="24">24 hours ago</option>
+                    <option value="custom">Custom</option> 
+                    <!-- Add more options as needed -->
+                </select>
+
+                <!-- Input for custom time or hours (hidden by default) -->
+                <div id="customInputContainer" style="display: none;">
+                    <label for="customInput" style="font-size: 18px;">Enter number of hours: </label>
+                    <input type="text" id="customInput">
+                </div>
+                <button onclick="getStartTime()" style="font-size: 18px;">Apply</button>
+            </div>
+
+
+        </div> 
+
+        <!-- Start time dropdown container  -->
+        <!-- <div class="start-time-button-container">
+            <div class="start-time-button"> 
+                <label for="startTimeDropdown">Select Start Time:</label>
+                <select id="startTimeDropdown">
+                    <option value="1">1 hour ago</option>
+                    <option value="6">6 hours ago</option>
+                    <option value="24">24 hours ago</option>
+                </select>
+                <button onclick="getStartTime()">Apply</button>
+            </div> 
+        </div>   -->
+
+    </div>
 
 </body>
 </html>
